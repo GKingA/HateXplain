@@ -117,7 +117,7 @@ def standaloneEval_with_rational(params, test_data=None,extra_data_path=None, to
         y_test = [ele[2] for ele in test] 
         encoder = LabelEncoder()
         encoder.classes_ = np.load('Data/classes.npy')
-        params['weights']=class_weight.compute_class_weight('balanced',np.unique(y_test),y_test).astype('float32')
+        params['weights']=class_weight.compute_class_weight(class_weight='balanced',classes=np.unique(y_test),y=y_test).astype('float32')
     if(extra_data_path!=None):
         params_dash={}
         params_dash['num_classes']=3

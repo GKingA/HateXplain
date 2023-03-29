@@ -1,7 +1,6 @@
 ### This is run when you want to select the parameters from the parameters file
 import transformers 
 import torch
-import neptune
 from knockknock import slack_sender
 from transformers import *
 import glob 
@@ -47,7 +46,7 @@ def get_gpu():
     print('There are %d GPU(s) available.' % torch.cuda.device_count())
     while(1):
         tempID = [] 
-        tempID = GPUtil.getAvailable(order = 'memory', limit = 1, maxLoad = 0.1, maxMemory = 0.07, includeNan=False, excludeID=[], excludeUUID=[])
+        tempID = GPUtil.getAvailable()
         if len(tempID) > 0:
             print("Found a gpu")
             print('We will use the GPU:',tempID[0],torch.cuda.get_device_name(tempID[0]))
@@ -174,6 +173,7 @@ def Eval_phase(params,which_files='test',model=None,test_dataloader=None,device=
         print(" Test took: {:}".format(format_time(time.time() - t0)))
         #print(ConfusionMatrix(true_labels,pred_labels))
     else:
+        import neptune
         bert_model = params['path_files']
         language  = params['language']
         name_one=bert_model+"_"+language
@@ -206,7 +206,7 @@ def train_model(params,device):
 #         print(y_test)
         encoder = LabelEncoder()
         encoder.classes_ = np.load(params['class_names'],allow_pickle=True)
-        params['weights']=class_weight.compute_class_weight('balanced',np.unique(y_test),y_test).astype('float32') 
+        params['weights']=class_weight.compute_class_weight(class_weight='balanced',classes=np.unique(y_test),y=y_test).astype('float32')
         #params['weights']=np.array([len(y_test)/y_test.count(encoder.classes_[0]),len(y_test)/y_test.count(encoder.classes_[1]),len(y_test)/y_test.count(encoder.classes_[2])]).astype('float32') 
         
         
@@ -245,6 +245,7 @@ def train_model(params,device):
         name_one=params['model_name']
         
     if(params['logging']=='neptune'):
+        import neptune
         neptune.create_experiment(name_one,params=params,send_hardware_metrics=False,run_monitoring_thread=False)
         
         neptune.append_tag(name_one)
@@ -311,7 +312,8 @@ def train_model(params,device):
             loss = outputs[0]
            
             if(params['logging']=='neptune'):
-            	neptune.log_metric('batch_loss',loss.item())
+                import neptune
+                neptune.log_metric('batch_loss',loss.item())
             # Accumulate the training loss over all of the batches so that we can
             # calculate the average loss at the end. `loss` is a Tensor containing a
             # single value; the `.item()` function just returns the Python value 
@@ -334,6 +336,7 @@ def train_model(params,device):
         # Calculate the average loss over the training data.
         avg_train_loss = total_loss / len(train_dataloader)
         if(params['logging']=='neptune'):
+            import neptune
             neptune.log_metric('avg_train_loss',avg_train_loss)
         else:
             print('avg_train_loss',avg_train_loss)
@@ -345,7 +348,8 @@ def train_model(params,device):
         test_fscore,test_accuracy,test_precision,test_recall,test_roc_auc,logits_all_final=Eval_phase(params,'test',model,test_dataloader,device)
 
         #Report the final accuracy for this validation run.
-        if(params['logging']=='neptune'):	
+        if(params['logging']=='neptune'):
+            import neptune
             neptune.log_metric('test_fscore',test_fscore)
             neptune.log_metric('test_accuracy',test_accuracy)
             neptune.log_metric('test_precision',test_precision)
@@ -389,6 +393,7 @@ def train_model(params,device):
                 save_normal_model(model,params)
 
     if(params['logging']=='neptune'):
+        import neptune
         neptune.log_metric('best_val_fscore',best_val_fscore)
         neptune.log_metric('best_test_fscore',best_test_fscore)
         neptune.log_metric('best_val_rocauc',best_val_roc_auc)
@@ -547,6 +552,7 @@ if __name__=='__main__':
     ##### change in logging to output the results to neptune
     params['logging']='local'
     if(params['logging']=='neptune'):
+        import neptune
         from api_config import project_name,api_token
         neptune.init(project_name,api_token=api_token)
         neptune.set_project(project_name)
