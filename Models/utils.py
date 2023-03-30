@@ -122,7 +122,7 @@ def return_params(path_name, att_lambda, num_classes=3):
             output_dir = output_dir + "_" + str(params["num_classes"])
         params["path_files"] = output_dir
 
-    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"]
+    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     if params["num_classes"] == 2 and (params["auto_weights"] == False):
         params["weights"] = [1.0, 1.0]
@@ -237,6 +237,8 @@ def save_normal_model(model, params):
             + str(params["num_classes"])
             + "_"
             + str(params["att_lambda"])
+            + "_"
+            + str(os.path.basename(params["data_file"]))
             + ".pth"
         )
     else:
@@ -249,6 +251,8 @@ def save_normal_model(model, params):
             + str(params["hidden_size"])
             + "_"
             + str(params["num_classes"])
+            + "_"
+            + str(os.path.basename(params["data_file"]))
             + ".pth"
         )
 
