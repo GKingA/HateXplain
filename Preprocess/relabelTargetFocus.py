@@ -173,29 +173,27 @@ def save_in_original_format(
     for purity, mm_dict in filtered_df.items():
         for maj_min, (group, other) in mm_dict.items():
             df = pd.concat([group, other]).sort_index()
-            df_dict = {"test": df[df.test], "train": df[df.train], "val": df[df.val]}
-            for tvt, dataframe in df_dict.items():
-                tvt_dict = {}
-                for idx, line in dataframe.iterrows():
-                    tvt_dict[line.id] = {
-                        "post_id": line.id,
-                        "annotators": [
-                            {
-                                "label": "normal"
-                                if line.label == "None"
-                                else "offensive",
-                                "annotator_id": a["annotator_id"],
-                                "target": a["target"],
-                            }
-                            for a in line.annotators
-                        ],
-                        "rationales": line.original_rationale_list,
-                        "post_tokens": line.tokens,
-                    }
-                with open(
-                    os.path.join(target_path, f"{maj_min}_{tvt}_{purity}.json"), "w"
-                ) as json_file:
-                    json.dump(tvt_dict, json_file)
+            original_dict = {}
+            for idx, line in df.iterrows():
+                original_dict[line.id] = {
+                    "post_id": line.id,
+                    "annotators": [
+                        {
+                            "label": "normal"
+                            if line.label == "None"
+                            else "offensive",
+                            "annotator_id": a["annotator_id"],
+                            "target": a["target"],
+                        }
+                        for a in line.annotators
+                    ],
+                    "rationales": line.original_rationale_list,
+                    "post_tokens": line.tokens,
+                }
+            with open(
+                os.path.join(target_path, f"{maj_min}_{purity}.json"), "w"
+            ) as json_file:
+                json.dump(original_dict, json_file)
 
 
 def get_sentences(
@@ -425,7 +423,7 @@ if __name__ == "__main__":
         dataf.to_csv(os.path.join(dir_path, graph_file_path), sep="\t", index=False)
         filtered = filter_dataframe(dataf, args.target, args.remove_by_purity)
         save_in_original_format(
-            filtered, os.path.join(dir_path, "original_format"), args.target
+            filtered, dir_path, args.target
         )
 
         if args.mode == "both":
