@@ -179,107 +179,52 @@ def masked_cross_entropy(input1, target, mask):
 
 ###########################################   MODEL LOADING, SAVING AND SELECTION FUNCtIONS
 
+def model_path_builder(params):
+    if params["train_att"]:
+        if params["att_lambda"] >= 1:
+            params["att_lambda"] = int(params["att_lambda"])
+        return os.path.join("Saved",
+                            f"{params['model_name']}_{params['seq_model']}_"
+                            f"{params['hidden_size']}_{params['num_classes']}_"
+                            f"{params['att_lambda']}_{os.path.basename(params['data_file'])}.pth")
+    else:
+        return os.path.join("Saved",
+                            f"{params['model_name']}_{params['seq_model']}_"
+                            f"{params['hidden_size']}_{params['num_classes']}_"
+                            f"{os.path.basename(params['data_file'])}.pth")
 
 #### load normal model (bert model is directly loaded using the pretrained method)
 def load_model(model, params, use_cuda=False):
-    if params["train_att"] == True:
-
-        if params["att_lambda"] >= 1:
-            params["att_lambda"] = int(params["att_lambda"])
-        model_path = (
-            "Saved/"
-            + params["model_name"]
-            + "_"
-            + params["seq_model"]
-            + "_"
-            + str(params["hidden_size"])
-            + "_"
-            + str(params["num_classes"])
-            + "_"
-            + str(params["att_lambda"])
-            + ".pth"
-        )
-    else:
-        model_path = (
-            "Saved/"
-            + params["model_name"]
-            + "_"
-            + params["seq_model"]
-            + "_"
-            + str(params["hidden_size"])
-            + "_"
-            + str(params["num_classes"])
-            + ".pth"
-        )
+    model_path = model_path_builder(params)
     print(model_path)
     """Load model."""
     map_location = "cpu"
-    #     if use_cuda and torch.cuda.is_available():
-    # map_location = 'cuda'
+    if use_cuda and torch.cuda.is_available():
+        map_location = 'cuda'
     model.load_state_dict(torch.load(model_path, map_location))
     return model
 
 
 def save_normal_model(model, params):
     """Save model."""
-    if params["train_att"] == True:
-        if params["att_lambda"] >= 1:
-            params["att_lambda"] = int(params["att_lambda"])
-
-        model_path = (
-            "Saved/"
-            + params["model_name"]
-            + "_"
-            + params["seq_model"]
-            + "_"
-            + str(params["hidden_size"])
-            + "_"
-            + str(params["num_classes"])
-            + "_"
-            + str(params["att_lambda"])
-            + "_"
-            + str(os.path.basename(params["data_file"]))
-            + ".pth"
-        )
-    else:
-        model_path = (
-            "Saved/"
-            + params["model_name"]
-            + "_"
-            + params["seq_model"]
-            + "_"
-            + str(params["hidden_size"])
-            + "_"
-            + str(params["num_classes"])
-            + "_"
-            + str(os.path.basename(params["data_file"]))
-            + ".pth"
-        )
-
+    model_path = model_path_builder(params)
     print(model_path)
     torch.save(model.state_dict(), model_path)
 
 
 def save_bert_model(model, tokenizer, params):
-    output_dir = "Saved/" + params["path_files"] + "_"
     if params["train_att"]:
         if params["att_lambda"] >= 1:
             params["att_lambda"] = int(params["att_lambda"])
 
-        output_dir = (
-            output_dir
-            + str(params["supervised_layer_pos"])
-            + "_"
-            + str(params["num_supervised_heads"])
-            + "_"
-            + str(params["num_classes"])
-            + "_"
-            + str(params["att_lambda"])
-            + "/"
-        )
-
+        output_dir = os.path.join("Saved/",
+                                  f"{params['path_files']}_{params['supervised_layer_pos']}_"
+                                  f"{params['num_supervised_heads']}_{params['num_classes']}_"
+                                  f"{params['att_lambda']}_{os.path.basename(params['data_file'])[:-5]}") + "/"
     else:
-        output_dir = output_dir + "_" + str(params["num_classes"]) + "/"
+        output_dir = os.path.join("Saved/",
+                                  f"{params['path_files']}__{params['num_classes']}_"
+                                  f"{os.path.basename(params['data_file'])[:-5]}") + "/"
     print(output_dir)
     # Create output directory if needed
     if not os.path.exists(output_dir):

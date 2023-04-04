@@ -366,7 +366,7 @@ if __name__ == "__main__":
         "model_to_use",
         metavar="--model_to_use",
         type=str,
-        help="model to use for evaluation",
+        help="model config to use for evaluation",
     )
 
     my_parser.add_argument(
@@ -381,19 +381,19 @@ if __name__ == "__main__":
     model_to_use = args.model_to_use
 
     params = return_params(
-        model_dict_params[model_to_use], float(args.attention_lambda)
+        model_to_use, float(args.attention_lambda)
     )
 
     params["variance"] = 1
-    params["num_classes"] = 3
-    params["device"] = "cpu"
+    # params["num_classes"] = 3  use the one from the config file
+    # params["device"] = "cpu"
     fix_the_random(seed_val=params["random_seed"])
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
-    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"]
+    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
     # test_data=get_test_data(temp_read,params,message='text')
     final_list_dict = get_final_dict_with_rational(params, params["data_file"], topk=5)
 
-    path_name = model_dict_params[model_to_use]
+    path_name = model_to_use
     path_name_explanation = (
         "explanations_dicts/"
         + path_name.split("/")[1].split(".")[0]
