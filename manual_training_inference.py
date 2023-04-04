@@ -307,7 +307,7 @@ def train_model(params, device):
     best_val_recall = 0
     best_test_recall = 0
 
-    for epoch_i in range(0, params["epochs"]):
+    for epoch_i in range(0, int(params["epochs"])):
         print("")
         print("======== Epoch {:} / {:} ========".format(epoch_i + 1, params["epochs"]))
         print("Training...")
@@ -644,8 +644,8 @@ if __name__ == "__main__":
         print("Since you dont want to use GPU, using the CPU instead.")
         device = torch.device("cpu")
     #### Few handy keys that you can directly change.
-    params["variance"] = 1
-    params["epochs"] = 5
+    # params["variance"] = 1
+    # params["epochs"] = 5
     params["to_save"] = True
     #params["num_classes"] = 3  #use the one from the config
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
@@ -654,6 +654,6 @@ if __name__ == "__main__":
         params["weights"] = [1.0, 1.0]
 
     # for att_lambda in [0.001,0.01,0.1,1,10,100]
-    params["att_lambda"] = float(args.attention_lambda)
+    params["att_lambda"] = float(args.attention_lambda) if "att_lambda" not in params else params["att_lambda"]
     print(params["num_classes"], params["data_file"])
     train_model(params, device)
