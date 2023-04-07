@@ -132,9 +132,10 @@ def standaloneEval_with_rational(
         params["weights"] = class_weight.compute_class_weight(
             class_weight="balanced", classes=np.unique(y_test), y=y_test
         ).astype("float32")
-    if extra_data_path != None:
+    if extra_data_path is not None:
+        print("extra data path")
         params_dash = {}
-        params_dash["num_classes"] = 3
+        params_dash["num_classes"] = params["num_classes"] # 3
         params_dash["data_file"] = extra_data_path
         params_dash["class_names"] = dict_data_folder[str(params["num_classes"])][
             "class_label"
@@ -383,8 +384,7 @@ if __name__ == "__main__":
     params = return_params(
         model_to_use, float(args.attention_lambda)
     )
-
-    params["variance"] = 1
+    # params["variance"] = 1
     # params["num_classes"] = 3  use the one from the config file
     # params["device"] = "cpu"
     fix_the_random(seed_val=params["random_seed"])
@@ -401,6 +401,7 @@ if __name__ == "__main__":
         + str(params["att_lambda"])
         + "_explanation_top5.json"
     )
+    os.makedirs(os.path.dirname(path_name_explanation), exist_ok=True)
     with open(path_name_explanation, "w") as fp:
         fp.write("\n".join(json.dumps(i, cls=NumpyEncoder) for i in final_list_dict))
 

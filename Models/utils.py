@@ -98,7 +98,7 @@ def return_params(path_name, att_lambda, num_classes=3):
         if (key == "weights") and (params["auto_weights"] == False):
             params[key] = ast.literal_eval(params[key])
     params["att_lambda"] = att_lambda
-    params["num_classes"] = num_classes
+    params["num_classes"] = num_classes if "num_classes" not in params else int(params["num_classes"])
     if params["bert_tokens"]:
         output_dir = "Saved/" + params["path_files"] + "_"
         if params["train_att"]:
@@ -186,12 +186,12 @@ def model_path_builder(params):
         return os.path.join("Saved",
                             f"{params['model_name']}_{params['seq_model']}_"
                             f"{params['hidden_size']}_{params['num_classes']}_"
-                            f"{params['att_lambda']}_{os.path.basename(params['data_file'])}.pth")
+                            f"{params['att_lambda']}_{os.path.basename(params['data_file'])[:-5]}.pth")
     else:
         return os.path.join("Saved",
                             f"{params['model_name']}_{params['seq_model']}_"
                             f"{params['hidden_size']}_{params['num_classes']}_"
-                            f"{os.path.basename(params['data_file'])}.pth")
+                            f"{os.path.basename(params['data_file'])[:-5]}.pth")
 
 #### load normal model (bert model is directly loaded using the pretrained method)
 def load_model(model, params, use_cuda=False):
