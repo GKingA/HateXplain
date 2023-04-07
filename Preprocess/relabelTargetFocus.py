@@ -122,10 +122,9 @@ def filter_dataframe(
             & purity_filter
         ]
         majority_group["label"] = target.capitalize()
-        if remove_by_purity:
+        if remove_by_purity and purity != "all":
             majority_others = dataframe[
                 dataframe.majority_labels.apply(lambda x: target.capitalize() not in x)
-                & purity_filter
             ]
         else:
             majority_others = dataframe[~dataframe.id.isin(majority_group.id)]
@@ -138,7 +137,7 @@ def filter_dataframe(
             & purity_filter
         ]
         minority_group["label"] = target.capitalize()
-        if remove_by_purity:
+        if remove_by_purity and purity != "all":
             minority_other = dataframe[
                 (
                     (
@@ -152,7 +151,6 @@ def filter_dataframe(
                         )
                     )
                 )
-                & purity_filter
             ]
         else:
             minority_other = dataframe[~dataframe.id.isin(minority_group.id)]
@@ -187,9 +185,12 @@ def save_in_original_format(
                         }
                         for a in line.annotators
                     ],
-                    "rationales": line.original_rationale_list,
+                    "rationales": [] if len(line.rationales) == 0 else
+                    [] if target.capitalize() not in line.rationales else
+                    [line.rationales[target.capitalize()] for _ in range(3)],
                     "post_tokens": line.tokens,
                 }
+            print(purity, len(original_dict))
             with open(
                 os.path.join(target_path, f"{maj_min}_{purity}.json"), "w"
             ) as json_file:
