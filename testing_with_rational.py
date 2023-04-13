@@ -133,7 +133,6 @@ def standaloneEval_with_rational(
             class_weight="balanced", classes=np.unique(y_test), y=y_test
         ).astype("float32")
     if extra_data_path is not None:
-        print("extra data path")
         params_dash = {}
         params_dash["num_classes"] = params["num_classes"] # 3
         params_dash["data_file"] = extra_data_path
@@ -145,7 +144,7 @@ def standaloneEval_with_rational(
             post_id_dict = json.load(fp)
         temp_read = temp_read[
             temp_read["post_id"].isin(post_id_dict["test"])
-            & (temp_read["final_label"].isin(["hatespeech", "offensive"]))
+            #& (temp_read["final_label"].isin(["hatespeech", "offensive"]))
         ]
         test_data = get_test_data(temp_read, params, message="text")
         test_extra = encodeData(test_data, vocab_own, params)
@@ -155,7 +154,6 @@ def standaloneEval_with_rational(
         test_dataloader = combine_features(test_extra, params, is_train=False)
     else:
         test_dataloader = combine_features(test, params, is_train=False)
-
     model = select_model(params, embeddings)
     if params["bert_tokens"] == False:
         model = load_model(model, params)
@@ -268,10 +266,11 @@ def standaloneEval_with_rational(
         ground_label = encoder.inverse_transform([ground_truth])[0]
         temp["annotation_id"] = post_id
         temp["classification"] = pred_label
+        # TODO: this should get solved more elegantly
         temp["classification_scores"] = {
             "hatespeech": logits[0],
             "normal": logits[1],
-            "offensive": logits[2],
+            #"offensive": logits[2],
         }
 
         topk_indicies = sorted(range(len(attention)), key=lambda i: attention[i])[
