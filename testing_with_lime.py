@@ -58,15 +58,6 @@ dict_data_folder = {
     "3": {"data_file": "Data/dataset.json", "class_label": "Data/classes.npy"},
 }
 
-model_dict_params = {
-    "bert": "best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE.json",
-    "bert_supervised": "best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE.json",
-    "birnn": "best_model_json/bestModel_birnn.json",
-    "cnngru": "best_model_json/bestModel_cnn_gru.json",
-    "birnn_att": "best_model_json/bestModel_birnnatt.json",
-    "birnn_scrat": "best_model_json/bestModel_birnnscrat.json",
-}
-
 
 def select_model(params, embeddings):
     if params["bert_tokens"]:
@@ -442,7 +433,7 @@ if __name__ == "__main__":
     temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["test"])]
 
     params = return_params(
-        model_dict_params[model_to_use], float(args.attention_lambda)
+        model_to_use, float(args.attention_lambda)
     )
     params["num_classes"] = 3
     params["num_samples"] = args.num_samples
@@ -451,7 +442,7 @@ if __name__ == "__main__":
     fix_the_random(seed_val=params["random_seed"])
     test_data = get_test_data(temp_read, params, message="text")
     final_dict = get_final_dict_with_lime(params, model_to_use, test_data, topk=5)
-    path_name = model_dict_params[model_to_use]
+    path_name = model_to_use
     path_name_explanation = (
         "explanations_dicts/"
         + path_name.split("/")[1].split(".")[0]
@@ -464,5 +455,3 @@ if __name__ == "__main__":
     with open(path_name_explanation, "w") as fp:
         fp.write("\n".join(json.dumps(i, cls=NumpyEncoder) for i in final_dict))
 
-
-# In[ ]:

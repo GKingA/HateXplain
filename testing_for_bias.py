@@ -58,15 +58,6 @@ dict_data_folder = {
     "3": {"data_file": "Data/dataset.json", "class_label": "Data/classes.npy"},
 }
 
-model_dict_params = {
-    "bert": "best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE.json",
-    "bert_supervised": "best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE.json",
-    "birnn": "best_model_json/bestModel_birnn.json",
-    "cnngru": "best_model_json/bestModel_cnn_gru.json",
-    "birnn_att": "best_model_json/bestModel_birnnatt.json",
-    "birnn_scrat": "best_model_json/bestModel_birnnscrat.json",
-}
-
 
 def select_model(params, embeddings):
     if params["bert_tokens"]:
@@ -305,7 +296,7 @@ if __name__ == "__main__":
     args = my_parser.parse_args()
     model_to_use = args.model_to_use
     params = return_params(
-        model_dict_params[model_to_use], float(args.attention_lambda), 2
+        model_to_use, float(args.attention_lambda), 2
     )
     params["variance"] = 1
     params["num_classes"] = 2
@@ -314,7 +305,7 @@ if __name__ == "__main__":
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"]
     # test_data=get_test_data(temp_read,params,message='text')
     final_dict = get_final_dict(params, params["data_file"], topk=5)
-    path_name = model_dict_params[model_to_use]
+    path_name = model_to_use
     path_name_explanation = (
         "explanations_dicts/" + path_name.split("/")[1].split(".")[0] + "_bias.json"
     )

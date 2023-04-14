@@ -58,16 +58,6 @@ dict_data_folder = {
     "3": {"data_file": "Data/dataset.json", "class_label": "Data/classes.npy"},
 }
 
-model_dict_params = {
-    "bert": "best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE.json",
-    "bert_supervised": "best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE.json",
-    "birnn": "best_model_json/bestModel_birnn.json",
-    "cnngru": "best_model_json/bestModel_cnn_gru.json",
-    "birnn_att": "best_model_json/bestModel_birnnatt.json",
-    "birnn_scrat": "best_model_json/bestModel_birnnscrat.json",
-}
-
-
 def select_model(params, embeddings):
     if params["bert_tokens"]:
         if params["what_bert"] == "weighted":
