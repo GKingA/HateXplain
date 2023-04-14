@@ -425,7 +425,7 @@ if __name__ == "__main__":
     params = return_params(
         model_to_use, float(args.attention_lambda)
     )
-    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params
+    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     params["num_samples"] = args.num_samples
     params["variance"] = 1
