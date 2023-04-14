@@ -422,24 +422,20 @@ if __name__ == "__main__":
 
     model_to_use = args.model_to_use
 
-    params = {}
-    params["num_classes"] = 3
-    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"]
+    params = return_params(
+        model_to_use, float(args.attention_lambda)
+    )
+    params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
+    params["num_samples"] = args.num_samples
+    params["variance"] = 1
+    #params["device"] = "cpu"
+    fix_the_random(seed_val=params["random_seed"])
     temp_read = get_annotated_data(params)
 
     with open("Data/post_id_divisions.json", "r") as fp:
         post_id_dict = json.load(fp)
     temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["test"])]
-
-    params = return_params(
-        model_to_use, float(args.attention_lambda)
-    )
-    params["num_classes"] = 3
-    params["num_samples"] = args.num_samples
-    params["variance"] = 1
-    params["device"] = "cpu"
-    fix_the_random(seed_val=params["random_seed"])
     test_data = get_test_data(temp_read, params, message="text")
     final_dict = get_final_dict_with_lime(params, model_to_use, test_data, topk=5)
     path_name = model_to_use

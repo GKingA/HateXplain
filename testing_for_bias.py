@@ -299,7 +299,7 @@ if __name__ == "__main__":
         model_to_use, float(args.attention_lambda), 2
     )
     params["variance"] = 1
-    params["num_classes"] = 2
+    # params["num_classes"] = 2
     fix_the_random(seed_val=params["random_seed"])
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"]
