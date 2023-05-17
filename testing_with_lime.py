@@ -108,6 +108,7 @@ class modelPred:
             self.params["vocab_size"] = vocab_own.embeddings.shape[0]
             self.vocab = vocab_own
             self.embeddings = vocab_own.embeddings
+
         if torch.cuda.is_available() and self.params["device"] == "cuda":
             # Tell PyTorch to use the GPU.
             self.device = torch.device("cuda")
@@ -118,7 +119,7 @@ class modelPred:
             self.device = torch.device("cpu")
 
         self.model = select_model(self.params, self.embeddings)
-        if self.params["bert_tokens"] == False:
+        if not self.params["bert_tokens"]:
             # pass
             self.model = load_model(self.model, self.params)
         if self.params["device"] == "cuda":
@@ -136,7 +137,7 @@ class modelPred:
             encoder = LabelEncoder()
             encoder.classes_ = np.load("Data/classes.npy")
             params["weights"] = class_weight.compute_class_weight(
-                "balanced", np.unique(y_test), y_test
+                class_weight="balanced", classes=np.unique(y_test), y=y_test
             ).astype("float32")
 
         temp_read = transform_dummy_data(sentences_list)
@@ -148,7 +149,6 @@ class modelPred:
         # during evaluation.
         # Tracking variables
         post_id_all = list(test_data["Post_id"])
-
         print("Running eval on test data...")
         t0 = time.time()
         true_labels = []
@@ -185,7 +185,6 @@ class modelPred:
                 device=device,
             )
             logits = outputs[0]
-            # print(logits)
             # Move logits and labels to CPU
             logits = logits.detach().cpu().numpy()
             label_ids = b_labels.detach().cpu().numpy()
@@ -201,7 +200,6 @@ class modelPred:
         logits_all_final = []
         for logits in logits_all:
             logits_all_final.append(list(softmax(logits)))
-
         return np.array(logits_all_final)
 
 
@@ -228,6 +226,7 @@ def standaloneEval_with_lime(
     if rational == True:
         sentence_list = []
         post_id_list = []
+        print(len(test_data))
         for index, row in tqdm(test_data.iterrows(), total=len(test_data)):
             # print(row)
             if row["Label"] == "normal":
@@ -246,9 +245,11 @@ def standaloneEval_with_lime(
             temp = {}
             temp["annotation_id"] = post_id
             temp["classification_scores"] = {
-                "hatespeech": proba[0],
-                "normal": proba[1],
-                "offensive": proba[2],
+                #"hatespeech": proba[0],
+                #"normal": proba[1],
+                #"offensive": proba[2],
+                "toxic": proba[0],
+                "non-toxic": proba[1]
             }
             list_dict.append(temp)
 
@@ -274,14 +275,19 @@ def standaloneEval_with_lime(
                 num_samples=params["num_samples"],
             )
             pred_id = np.argmax(exp.predict_proba)
+            pred_dict = {"hatespeech": "toxic", "offensive": "toxic", "normal": "non-toxic"}
             pred_label = encoder.inverse_transform([pred_id])[0]
+            if params["num_classes"] == 2:
+                pred_label = pred_dict[pred_label]
             ground_label = row["Label"]
             temp["annotation_id"] = row["Post_id"]
             temp["classification"] = pred_label
             temp["classification_scores"] = {
-                "hatespeech": exp.predict_proba[0],
-                "normal": exp.predict_proba[1],
-                "offensive": exp.predict_proba[2],
+                #"hatespeech": exp.predict_proba[0],
+                #"normal": exp.predict_proba[1],
+                #"offensive": exp.predict_proba[2],
+                "toxic": exp.predict_proba[0],
+                "non-toxic": exp.predict_proba[1]
             }
 
             attention = [0] * len(sentence.split(" "))
@@ -300,7 +306,7 @@ def standaloneEval_with_lime(
                         final_explanation.append(attention[i])
                 final_explanation.append(0)
                 attention = final_explanation
-            if rational == False:
+            if not rational:
                 assert len(attention) == len(row["Attention"])
 
             topk_indicies = sorted(range(len(attention)), key=lambda i: attention[i])[
@@ -321,7 +327,7 @@ def standaloneEval_with_lime(
                 }
             ]
             list_dict.append(temp)
-
+    print(len(test_data))
     return list_dict, test_data
 
 
@@ -335,12 +341,14 @@ def get_final_dict_with_lime(params, model_name, test_data, topk):
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk
     )
+    print(test_data_with_rational.head())
     list_dict_with_rational, _ = standaloneEval_with_lime(
         params, model_name, test_data=test_data_with_rational, topk=topk, rational=True
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk
     )
+    print(test_data_without_rational.head())
     list_dict_without_rational, _ = standaloneEval_with_lime(
         params,
         model_name,

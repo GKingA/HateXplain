@@ -97,7 +97,7 @@ def return_params(path_name, att_lambda, num_classes=3):
 
         if (key == "weights") and (params["auto_weights"] == False):
             params[key] = ast.literal_eval(params[key])
-    params["att_lambda"] = att_lambda
+    params["att_lambda"] = att_lambda if "att_lambda" not in params else params["att_lambda"]
     params["num_classes"] = num_classes if "num_classes" not in params else int(params["num_classes"])
     if params["bert_tokens"]:
         output_dir = "Saved/" + params["path_files"] + "_"
@@ -116,10 +116,13 @@ def return_params(path_name, att_lambda, num_classes=3):
                 + str(params["num_classes"])
                 + "_"
                 + str(params["att_lambda"])
+                + "_"
+                + str(os.path.basename(params['data_file'])[:-5])
+
             )
 
         else:
-            output_dir = output_dir + "_" + str(params["num_classes"])
+            output_dir = output_dir + "_" + str(params["num_classes"]) + "_" + str(os.path.basename(params['data_file'])[:-5])
         params["path_files"] = output_dir
 
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]

@@ -220,7 +220,7 @@ def convert_data(test_data, params, list_dict, rational_present=True, topk=2):
 
 def transform_dummy_data(sentences):
     post_id_list = ["temp"] * len(sentences)
-    pred_list = ["normal"] * len(sentences)
+    pred_list = ["non-toxic"] * len(sentences)
     explanation_list = []
     sentences_list = []
     for i in range(len(sentences)):
