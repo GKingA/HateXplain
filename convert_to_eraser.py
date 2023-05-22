@@ -138,12 +138,16 @@ def convert_to_eraser_format(dataset, method, save_split, save_path, id_division
 if __name__ == "__main__":
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--params", "-p", help="Path to the config file")
+    arg_parser.add_argument("--bert", "-b", help="Use bert tokenizer", action="strore_true", default=False)
+    arg_parser.add_argument("--save_path", "-s", help="Where to save the output", default=os.path.join(os.path.dirname(__file__), "Data/Evaluation/Model_Eval/"))
     args = arg_parser.parse_args()
 
     method = 'union'
     save_split = True
-    save_path = './Data/Evaluation/Model_Eval/'  # The dataset in Eraser Format will be stored here.
-    with open('./Data/post_id_divisions.json') as fp:
+    save_path = args.save_path  # The dataset in Eraser Format will be stored here.
+    if not os.path.exists(save_path):
+        os.makedirs(save_path, exist_ok=True)
+    with open(os.path.join(os.path.dirname(__file__), "/Data/post_id_divisions.json")) as fp:
         id_division = json.load(fp)
 
     with open(args.params) as fp:
@@ -152,7 +156,7 @@ if __name__ == "__main__":
     params["class_names"] = dict_data_folder[str(int(params['num_classes']))]['class_label']
 
     params['include_special'] = False
-    params['bert_tokens'] = False  # True
+    params['bert_tokens'] = args.bert  # False/True
     params['type_attention'] = 'softmax'
     params['set_decay'] = 0.1
     params['majority'] = 2
