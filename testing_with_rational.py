@@ -252,7 +252,10 @@ def standaloneEval_with_rational(
         temp = {}
         encoder = LabelEncoder()
         encoder.classes_ = np.load("Data/classes.npy")
-        pred_label = encoder.inverse_transform([pred])[0]
+        pred_dict = {"hatespeech": "non-toxic", "normal": "toxic"}
+        pred_label = encoder.inverse_transform([pred_id])[0]
+        if params["num_classes"] == 2:
+            pred_label = pred_dict[pred_label]
         ground_label = encoder.inverse_transform([ground_truth])[0]
         temp["annotation_id"] = post_id
         temp["classification"] = pred_label

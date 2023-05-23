@@ -279,7 +279,8 @@ def standaloneEval_with_lime(
                 num_samples=params["num_samples"],
             )
             pred_id = np.argmax(exp.predict_proba)
-            pred_dict = {"hatespeech": "toxic", "offensive": "toxic", "normal": "non-toxic"}
+            # This is deeply counter-intuitive, but 0->hatespeech or non-toxic, 1->normal or toxic. This is because of the classes.npy
+            pred_dict = {"hatespeech": "non-toxic", "normal": "toxic"}
             pred_label = encoder.inverse_transform([pred_id])[0]
             if params["num_classes"] == 2:
                 pred_label = pred_dict[pred_label]
