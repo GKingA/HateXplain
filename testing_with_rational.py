@@ -257,11 +257,17 @@ def standaloneEval_with_rational(
         temp["annotation_id"] = post_id
         temp["classification"] = pred_label
         # TODO: this should get solved more elegantly
-        temp["classification_scores"] = {
-            "hatespeech": logits[0],
-            "normal": logits[1],
-            #"offensive": logits[2],
-        }
+        if len(logits) == 3:
+            temp["classification_scores"] = {
+                "hatespeech": logits[0],
+                "normal": logits[1],
+                "offensive": logits[2],
+            }
+        else:
+            temp["classification_scores"] = {
+                 "toxic": logits[1],
+                 "non-toxic": logits[0]
+            }
 
         topk_indicies = sorted(range(len(attention)), key=lambda i: attention[i])[
             -topk:

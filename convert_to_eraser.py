@@ -77,9 +77,9 @@ def convert_to_eraser_format(dataset, method, save_split, save_path, id_division
     final_output = []
 
     if save_split:
-        train_fp = open(save_path + 'train.jsonl', 'w')
-        val_fp = open(save_path + 'val.jsonl', 'w')
-        test_fp = open(save_path + 'test.jsonl', 'w')
+        train_fp = open(os.path.join(save_path, 'train.jsonl'), 'w')
+        val_fp = open(os.path.join(save_path, 'val.jsonl'), 'w')
+        test_fp = open(os.path.join(save_path, 'test.jsonl'), 'w')
 
     for tcount, eachrow in enumerate(dataset):
 
@@ -110,10 +110,10 @@ def convert_to_eraser_format(dataset, method, save_split, save_path, id_division
         final_output.append(temp)
 
         if save_split:
-            if not os.path.exists(save_path + 'docs'):
-                os.makedirs(save_path + 'docs')
+            if not os.path.exists(os.path.join(save_path, 'docs')):
+                os.makedirs(os.path.join(save_path, 'docs'), exist_ok=True)
 
-            with open(save_path + 'docs/' + post_id, 'w') as fp:
+            with open(os.path.join(save_path, 'docs', post_id), 'w') as fp:
                 fp.write(' '.join([str(x) for x in list(anno_text_list)]))
 
             if post_id in id_division['train']:
@@ -125,7 +125,7 @@ def convert_to_eraser_format(dataset, method, save_split, save_path, id_division
             elif post_id in id_division['test']:
                 test_fp.write(json.dumps(temp) + '\n')
             else:
-                print(post_id)
+                print("Not in any:", post_id)
 
     if save_split:
         train_fp.close()
@@ -138,7 +138,7 @@ def convert_to_eraser_format(dataset, method, save_split, save_path, id_division
 if __name__ == "__main__":
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--params", "-p", help="Path to the config file")
-    arg_parser.add_argument("--bert", "-b", help="Use bert tokenizer", action="strore_true", default=False)
+    arg_parser.add_argument("--bert", "-b", help="Use bert tokenizer", action="store_true", default=False)
     arg_parser.add_argument("--save_path", "-s", help="Where to save the output", default=os.path.join(os.path.dirname(__file__), "Data/Evaluation/Model_Eval/"))
     args = arg_parser.parse_args()
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     save_path = args.save_path  # The dataset in Eraser Format will be stored here.
     if not os.path.exists(save_path):
         os.makedirs(save_path, exist_ok=True)
-    with open(os.path.join(os.path.dirname(__file__), "/Data/post_id_divisions.json")) as fp:
+    with open(os.path.join(os.path.dirname(__file__), "Data/post_id_divisions.json")) as fp:
         id_division = json.load(fp)
 
     with open(args.params) as fp:

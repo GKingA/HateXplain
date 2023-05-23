@@ -29,15 +29,7 @@ def get_gpu(params):
     print("There are %d GPU(s) available." % torch.cuda.device_count())
     while 1:
         tempID = []
-        tempID = GPUtil.getAvailable(
-            order="memory",
-            limit=1,
-            maxLoad=load_allowed,
-            maxMemory=load_allowed,
-            includeNan=False,
-            excludeID=[],
-            excludeUUID=[],
-        )
+        tempID = GPUtil.getAvailable()
         if len(tempID) > 0:
             print("Found a gpu")
             print(

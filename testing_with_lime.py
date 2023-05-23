@@ -244,13 +244,17 @@ def standaloneEval_with_lime(
         for post_id, proba in zip(post_id_list, list(probab_list)):
             temp = {}
             temp["annotation_id"] = post_id
-            temp["classification_scores"] = {
-                #"hatespeech": proba[0],
-                #"normal": proba[1],
-                #"offensive": proba[2],
-                "toxic": proba[0],
-                "non-toxic": proba[1]
-            }
+            if len(proba) == 3:
+                temp["classification_scores"] = {
+                    "hatespeech": proba[0],
+                    "normal": proba[1],
+                    "offensive": proba[2],
+                }
+            else:
+                temp["classification_scores"] = {
+                    "toxic": proba[1],
+                    "non-toxic": proba[0]
+                }
             list_dict.append(temp)
 
     else:
@@ -282,13 +286,17 @@ def standaloneEval_with_lime(
             ground_label = row["Label"]
             temp["annotation_id"] = row["Post_id"]
             temp["classification"] = pred_label
-            temp["classification_scores"] = {
-                #"hatespeech": exp.predict_proba[0],
-                #"normal": exp.predict_proba[1],
-                #"offensive": exp.predict_proba[2],
-                "toxic": exp.predict_proba[0],
-                "non-toxic": exp.predict_proba[1]
-            }
+            if len(exp.predict_proba) == 3:
+                temp["classification_scores"] = {
+                    "hatespeech": exp.predict_proba[0],
+                    "normal": exp.predict_proba[1],
+                    "offensive": exp.predict_proba[2],
+                }
+            else:
+                temp["classification_scores"] = {
+                    "toxic": exp.predict_proba[1],
+                    "non-toxic": exp.predict_proba[0]
+                }
 
             attention = [0] * len(sentence.split(" "))
 
