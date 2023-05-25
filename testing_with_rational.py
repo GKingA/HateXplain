@@ -92,7 +92,7 @@ def select_model(params, embeddings):
 
 
 def standaloneEval_with_rational(
-    params, test_data=None, extra_data_path=None, topk=2, use_ext_df=False
+    params, test_data=None, extra_data_path=None, topk=2, keep=False, use_ext_df=False
 ):
     #     device = torch.device("cpu")
     if torch.cuda.is_available() and params["device"] == "cuda":
@@ -118,7 +118,7 @@ def standaloneEval_with_rational(
     if params["auto_weights"]:
         y_test = [ele[2] for ele in test]
         encoder = LabelEncoder()
-        encoder.classes_ = np.load("Data/classes.npy")
+        encoder.classes_ = np.load(dict_data_folder[str(params["num_classes"])]["class_label"], allow_pickle=True)
         params["weights"] = class_weight.compute_class_weight(
             class_weight="balanced", classes=np.unique(y_test), y=y_test
         ).astype("float32")
@@ -132,10 +132,15 @@ def standaloneEval_with_rational(
         temp_read = get_annotated_data(params_dash)
         with open("Data/post_id_divisions.json", "r") as fp:
             post_id_dict = json.load(fp)
-        temp_read = temp_read[
-            temp_read["post_id"].isin(post_id_dict["test"])
-            #& (temp_read["final_label"].isin(["hatespeech", "offensive"]))
-        ]
+        if not keep:
+            temp_read = temp_read[
+                temp_read["post_id"].isin(post_id_dict["test"])
+                & (temp_read["final_label"].isin(["hatespeech", "offensive", "toxic"]))
+            ]
+        else:
+            temp_read = temp_read[
+                temp_read["post_id"].isin(post_id_dict["test"])
+            ]
         test_data = get_test_data(temp_read, params, message="text")
         test_extra = encodeData(test_data, vocab_own, params)
         test_dataloader = combine_features(test_extra, params, is_train=False)
@@ -251,15 +256,11 @@ def standaloneEval_with_rational(
         #             continue
         temp = {}
         encoder = LabelEncoder()
-        encoder.classes_ = np.load("Data/classes.npy")
-        pred_dict = {"hatespeech": "non-toxic", "normal": "toxic"}
-        pred_label = encoder.inverse_transform([pred_id])[0]
-        if params["num_classes"] == 2:
-            pred_label = pred_dict[pred_label]
+        encoder.classes_ = np.load(dict_data_folder[str(params["num_classes"])]["class_label"], allow_pickle=True)
+        pred_label = encoder.inverse_transform([pred])[0]
         ground_label = encoder.inverse_transform([ground_truth])[0]
         temp["annotation_id"] = post_id
         temp["classification"] = pred_label
-        # TODO: this should get solved more elegantly
         if len(logits) == 3:
             temp["classification_scores"] = {
                 "hatespeech": logits[0],
@@ -297,21 +298,21 @@ def standaloneEval_with_rational(
 # In[115]:
 
 
-def get_final_dict_with_rational(params, test_data=None, topk=5):
+def get_final_dict_with_rational(params, test_data=None, topk=5, keep=False):
     list_dict_org, test_data = standaloneEval_with_rational(
-        params, extra_data_path=test_data, topk=topk
+        params, extra_data_path=test_data, topk=topk, keep=keep
     )
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk
     )
     list_dict_with_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_with_rational, topk=topk, use_ext_df=True
+        params, test_data=test_data_with_rational, topk=topk, keep=keep, use_ext_df=True
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk
     )
     list_dict_without_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_without_rational, topk=topk, use_ext_df=True
+        params, test_data=test_data_without_rational, topk=topk, keep=keep, use_ext_df=True
     )
     final_list_dict = []
     for ele1, ele2, ele3 in zip(
@@ -374,6 +375,13 @@ if __name__ == "__main__":
         type=str,
         help="required to assign the contribution of the atention loss",
     )
+    my_parser.add_argument(
+        "--keep_neutral",
+        "-kn",
+        action="store_true",
+        default=False,
+        help="keep neutral parts of the dataset",
+    )
 
     args = my_parser.parse_args()
 
@@ -389,7 +397,7 @@ if __name__ == "__main__":
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
     # test_data=get_test_data(temp_read,params,message='text')
-    final_list_dict = get_final_dict_with_rational(params, params["data_file"], topk=5)
+    final_list_dict = get_final_dict_with_rational(params, params["data_file"], topk=5, keep=args.keep_neutral)
 
     path_name = model_to_use
     path_name_explanation = (

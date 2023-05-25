@@ -135,7 +135,7 @@ class modelPred:
         if params["auto_weights"]:
             y_test = [ele[2] for ele in self.test]
             encoder = LabelEncoder()
-            encoder.classes_ = np.load("Data/classes.npy")
+            encoder.classes_ = np.load(dict_data_folder[str(params['num_classes'])]["class_label"], allow_pickle=True)
             params["weights"] = class_weight.compute_class_weight(
                 class_weight="balanced", classes=np.unique(y_test), y=y_test
             ).astype("float32")
@@ -207,10 +207,10 @@ class modelPred:
 
 
 def standaloneEval_with_lime(
-    params, model_to_use, test_data=None, topk=2, rational=False
+    params, model_to_use, test_data=None, keep=False, topk=2, rational=False
 ):
     encoder = LabelEncoder()
-    encoder.classes_ = np.load("Data/classes.npy")
+    encoder.classes_ = np.load(dict_data_folder[str(params["num_classes"])]["class_label"], allow_pickle=True)
     explainer = LimeTextExplainer(
         class_names=list(encoder.classes_),
         split_expression="\s+",
@@ -229,7 +229,7 @@ def standaloneEval_with_lime(
         print(len(test_data))
         for index, row in tqdm(test_data.iterrows(), total=len(test_data)):
             # print(row)
-            if row["Label"] == "normal":
+            if not keep and (row["Label"] == "normal" or row["Label"] == "non-toxic"):
                 continue
             if params["bert_tokens"]:
                 tokens = tokenizer.convert_ids_to_tokens(row["Text"])[1:-1]
@@ -260,7 +260,7 @@ def standaloneEval_with_lime(
     else:
 
         for index, row in tqdm(test_data.iterrows(), total=len(test_data)):
-            if row["Label"] == "normal":
+            if not keep and (row["Label"] == "normal" or row["Label"] == "non-toxic"):
                 continue
             if params["bert_tokens"]:
                 tokens = tokenizer.convert_ids_to_tokens(row["Text"])[1:-1]
@@ -279,11 +279,7 @@ def standaloneEval_with_lime(
                 num_samples=params["num_samples"],
             )
             pred_id = np.argmax(exp.predict_proba)
-            # This is deeply counter-intuitive, but 0->hatespeech or non-toxic, 1->normal or toxic. This is because of the classes.npy
-            pred_dict = {"hatespeech": "non-toxic", "normal": "toxic"}
             pred_label = encoder.inverse_transform([pred_id])[0]
-            if params["num_classes"] == 2:
-                pred_label = pred_dict[pred_label]
             ground_label = row["Label"]
             temp["annotation_id"] = row["Post_id"]
             temp["classification"] = pred_label
@@ -343,25 +339,24 @@ def standaloneEval_with_lime(
 # In[115]:
 
 
-def get_final_dict_with_lime(params, model_name, test_data, topk):
+def get_final_dict_with_lime(params, model_name, test_data, keep, topk):
     list_dict_org, test_data = standaloneEval_with_lime(
-        params, model_name, test_data=test_data, topk=topk
+        params, model_name, test_data=test_data, keep=keep, topk=topk
     )
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk
     )
-    print(test_data_with_rational.head())
     list_dict_with_rational, _ = standaloneEval_with_lime(
-        params, model_name, test_data=test_data_with_rational, topk=topk, rational=True
+        params, model_name, test_data=test_data_with_rational, keep=keep, topk=topk, rational=True
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk
     )
-    print(test_data_without_rational.head())
     list_dict_without_rational, _ = standaloneEval_with_lime(
         params,
         model_name,
         test_data=test_data_without_rational,
+        keep=keep,
         topk=topk,
         rational=True,
     )
@@ -434,6 +429,13 @@ if __name__ == "__main__":
         type=str,
         help="required to assign the contribution of the atention loss",
     )
+    my_parser.add_argument(
+        "--keep_neutral",
+        "-kn",
+        action="store_true",
+        default=False,
+        help="keep neutral parts of the dataset",
+    )
 
     args = my_parser.parse_args()
 
@@ -442,6 +444,7 @@ if __name__ == "__main__":
     params = return_params(
         model_to_use, float(args.attention_lambda)
     )
+    keep_neutral = args.keep_neutral
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     params["num_samples"] = args.num_samples
@@ -454,7 +457,7 @@ if __name__ == "__main__":
         post_id_dict = json.load(fp)
     temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["test"])]
     test_data = get_test_data(temp_read, params, message="text")
-    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, topk=5)
+    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5)
     path_name = model_to_use
     path_name_explanation = (
         "explanations_dicts/"

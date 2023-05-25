@@ -73,7 +73,7 @@ def get_evidence(post_id, anno_text, explanations):
 
 
 # To use the metrices defined in ERASER, we will have to convert the dataset
-def convert_to_eraser_format(dataset, method, save_split, save_path, id_division):
+def convert_to_eraser_format(dataset, method, save_split, save_path, id_division, keep):
     final_output = []
 
     if save_split:
@@ -89,7 +89,7 @@ def convert_to_eraser_format(dataset, method, save_split, save_path, id_division
         anno_text_list = eachrow[2]
         majority_label = eachrow[1]
 
-        if majority_label == 'normal':
+        if not keep and (majority_label == 'normal' or majority_label == "non-toxic"):
             continue
 
         all_labels = eachrow[4]
@@ -140,9 +140,11 @@ if __name__ == "__main__":
     arg_parser.add_argument("--params", "-p", help="Path to the config file")
     arg_parser.add_argument("--bert", "-b", help="Use bert tokenizer", action="store_true", default=False)
     arg_parser.add_argument("--save_path", "-s", help="Where to save the output", default=os.path.join(os.path.dirname(__file__), "Data/Evaluation/Model_Eval/"))
+    arg_parser.add_argument("--keep_neutral", "-kn", action="store_true", default=False, help="Keep the neutral instances.")
     args = arg_parser.parse_args()
 
     method = 'union'
+    keep_neutral = args.keep_neutral
     save_split = True
     save_path = args.save_path  # The dataset in Eraser Format will be stored here.
     if not os.path.exists(save_path):
@@ -173,4 +175,4 @@ if __name__ == "__main__":
     data_all_labelled = get_annotated_data(params)
     training_data = get_training_data(data_all_labelled, params)
 
-    convert_to_eraser_format(training_data, method, save_split, save_path, id_division)
+    convert_to_eraser_format(training_data, method, save_split, save_path, id_division, keep_neutral)
