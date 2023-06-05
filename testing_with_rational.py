@@ -422,8 +422,6 @@ if __name__ == "__main__":
             "explanations_dicts/"
             + path_name.split("/")[1].split(".")[0]
             + "_"
-            + os.path.basename(data_file).split(".")[0]
-            + "_"
             + str(params["att_lambda"])
             + "_explanation_top5.json"
         )
@@ -433,7 +431,9 @@ if __name__ == "__main__":
                 + path_name.split("/")[1].split(".")[0]
                 + "_"
                 + str(params["att_lambda"])
-                + "_explanation_top5")
+                + "_explanation_top5_"
+                + os.path.basename(data_file).split(".")[0]
+        )
 
         if args.bert_mask:
             path_name_explanation += "_bert_mask.json"
