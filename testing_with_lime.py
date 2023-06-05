@@ -339,18 +339,18 @@ def standaloneEval_with_lime(
 # In[115]:
 
 
-def get_final_dict_with_lime(params, model_name, test_data, keep, topk):
+def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mask):
     list_dict_org, test_data = standaloneEval_with_lime(
         params, model_name, test_data=test_data, keep=keep, topk=topk
     )
     test_data_with_rational = convert_data(
-        test_data, params, list_dict_org, rational_present=True, topk=topk
+        test_data, params, list_dict_org, rational_present=True, topk=topk, bert_mask=bert_mask
     )
     list_dict_with_rational, _ = standaloneEval_with_lime(
         params, model_name, test_data=test_data_with_rational, keep=keep, topk=topk, rational=True
     )
     test_data_without_rational = convert_data(
-        test_data, params, list_dict_org, rational_present=False, topk=topk
+        test_data, params, list_dict_org, rational_present=False, topk=topk, bert_mask=bert_mask
     )
     list_dict_without_rational, _ = standaloneEval_with_lime(
         params,
@@ -369,12 +369,6 @@ def get_final_dict_with_lime(params, model_name, test_data, keep, topk):
         final_list_dict.append(ele1)
     return final_list_dict
     return list_dict_org
-
-
-# In[ ]:
-
-
-# In[88]:
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -436,6 +430,19 @@ if __name__ == "__main__":
         default=False,
         help="keep neutral parts of the dataset",
     )
+    my_parser.add_argument(
+        "--bert_mask",
+        "-bm",
+        action="store_true",
+        default=False,
+        help="replace the rationale/not rationale with mask token instead of deleting it"
+    )
+    my_parser.add_argument(
+        "--test_data",
+        "-td",
+        type=str,
+        help="data to use for evaluation, defaults to the test portion of the data inn the json file"
+    )
 
     args = my_parser.parse_args()
 
@@ -446,28 +453,45 @@ if __name__ == "__main__":
     )
     keep_neutral = args.keep_neutral
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
+    if args.test_data is not None:
+        params["data_file"] = args.test_data
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     params["num_samples"] = args.num_samples
     params["variance"] = 1
     #params["device"] = "cpu"
     fix_the_random(seed_val=params["random_seed"])
     temp_read = get_annotated_data(params)
-
     with open("Data/post_id_divisions.json", "r") as fp:
         post_id_dict = json.load(fp)
     temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["test"])]
     test_data = get_test_data(temp_read, params, message="text")
-    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5)
+    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5, bert_mask=args.bert_mask)
     path_name = model_to_use
-    path_name_explanation = (
-        "explanations_dicts/"
-        + path_name.split("/")[1].split(".")[0]
-        + "_explanation_with_lime_"
-        + str(params["num_samples"])
-        + "_"
-        + str(params["att_lambda"])
-        + ".json"
-    )
+    if args.test_data is None and not args.bert_mask:
+        path_name_explanation = (
+            "explanations_dicts/"
+            + path_name.split("/")[1].split(".")[0]
+            + "_explanation_with_lime_"
+            + str(params["num_samples"])
+            + "_"
+            + str(params["att_lambda"])
+            + ".json"
+        )
+    else:
+        path_name_explanation = (
+            "explanations_dicts/"
+            + path_name.split("/")[1].split(".")[0]
+            + "_explanation_with_lime_"
+            + os.path.basename(params["data_file"]).split(".")[0]
+            + "_"
+            + str(params["num_samples"])
+            + "_"
+            + str(params["att_lambda"])
+        )
+        if args.bert_mask:
+            path_name_explanation += "_bert_mask.json"
+        else:
+            path_name_explanation += ".json"
     with open(path_name_explanation, "w") as fp:
         fp.write("\n".join(json.dumps(i, cls=NumpyEncoder) for i in final_dict))
 

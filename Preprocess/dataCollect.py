@@ -172,7 +172,7 @@ def get_test_data(data, params, message="text"):
     return training_data
 
 
-def convert_data(test_data, params, list_dict, rational_present=True, topk=2):
+def convert_data(test_data, params, list_dict, rational_present=True, topk=2, bert_mask=False):
     """this converts the data to be with or without the rationals based on the previous predictions"""
     """input: params -- input dict, list_dict -- previous predictions containing rationals
     rational_present -- whether to keep rational only or remove them only
@@ -202,6 +202,9 @@ def convert_data(test_data, params, list_dict, rational_present=True, topk=2):
                 if i in topk_indices:
                     new_text.append(row["Text"][i])
                     new_attention.append(row["Attention"][i])
+                elif bert_mask:
+                    new_text.append(103)
+                    new_attention.append(0)
             if params["bert_tokens"]:
                 new_attention.append(0)
                 new_text.append(102)
@@ -210,6 +213,9 @@ def convert_data(test_data, params, list_dict, rational_present=True, topk=2):
                 if i not in topk_indices:
                     new_text.append(row["Text"][i])
                     new_attention.append(row["Attention"][i])
+                elif bert_mask:
+                    new_text.append(103)
+                    new_attention.append(0)
         test_data_modified.append(
             [row["Post_id"], new_text, new_attention, row["Label"]]
         )
