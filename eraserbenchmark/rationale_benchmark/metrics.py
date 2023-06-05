@@ -22,6 +22,10 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
+import sys
+
+sys.path.append("/newstorage4/gemes/HateXplain/eraserbenchmark")
+
 from rationale_benchmark.utils import (
     Annotation,
     Evidence,
@@ -387,20 +391,34 @@ def score_classifications(
         return entropy(faith_scores_, cls_scores_)
 
     labels = list(set(x.classification for x in annotations))
-    labels += ["normal"]
+    print(labels)
+    # annotations = gold
+    if "toxic" in labels and "non-toxic" not in labels:
+        labels.append("non-toxic")
+    elif ("offensive" in labels or "hatespeech" in labels) and "normal" not in labels:
+        labels.append("normal")
     label_to_int = {l: i for i, l in enumerate(labels)}
     key_to_instances = {inst["annotation_id"]: inst for inst in instances}
     truth = []
     predicted = []
+    print(len(annotations), len(key_to_instances), len(instances))
     for ann in annotations:
-        truth.append(label_to_int[ann.classification])
+        if ann.annotation_id not in key_to_instances:
+            continue
         inst = key_to_instances[ann.annotation_id]
+        truth.append(label_to_int[ann.classification])
         predicted.append(label_to_int[inst["classification"]])
+    print(len(truth), len(predicted))
     classification_scores = classification_report(
         truth, predicted, output_dict=True, target_names=labels, digits=3
     )
     accuracy = accuracy_score(truth, predicted)
     if "comprehensiveness_classification_scores" in instances[0]:
+        for x in instances:
+            if x["classification"] not in x["classification_scores"]:
+                print("classification", x)
+            if x["classification"] not in x["comprehensiveness_classification_scores"]:
+                print("comprehensiveness", x)
         comprehensiveness_scores = [
             x["classification_scores"][x["classification"]]
             - x["comprehensiveness_classification_scores"][x["classification"]]
@@ -412,6 +430,11 @@ def score_classifications(
         comprehensiveness_scores = None
 
     if "sufficiency_classification_scores" in instances[0]:
+        for x in instances:
+            if x["classification"] not in x["classification_scores"]:
+                print("classification", x)
+            if x["classification"] not in x["sufficiency_classification_scores"]:
+                print("sufficiency", x)
         sufficiency_scores = [
             x["classification_scores"][x["classification"]]
             - x["sufficiency_classification_scores"][x["classification"]]

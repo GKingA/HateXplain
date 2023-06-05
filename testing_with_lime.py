@@ -244,7 +244,7 @@ def standaloneEval_with_lime(
         for post_id, proba in zip(post_id_list, list(probab_list)):
             temp = {}
             temp["annotation_id"] = post_id
-            if len(proba) == 3:
+            if params["num_classes"] == 3:
                 temp["classification_scores"] = {
                     "hatespeech": proba[0],
                     "normal": proba[1],
@@ -283,7 +283,7 @@ def standaloneEval_with_lime(
             ground_label = row["Label"]
             temp["annotation_id"] = row["Post_id"]
             temp["classification"] = pred_label
-            if len(exp.predict_proba) == 3:
+            if params["num_classes"] == 3:
                 temp["classification_scores"] = {
                     "hatespeech": exp.predict_proba[0],
                     "normal": exp.predict_proba[1],

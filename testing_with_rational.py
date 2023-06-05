@@ -261,7 +261,7 @@ def standaloneEval_with_rational(
         ground_label = encoder.inverse_transform([ground_truth])[0]
         temp["annotation_id"] = post_id
         temp["classification"] = pred_label
-        if len(logits) == 3:
+        if params["num_classes"] == 3:
             temp["classification_scores"] = {
                 "hatespeech": logits[0],
                 "normal": logits[1],

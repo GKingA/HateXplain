@@ -13,7 +13,7 @@ dict_data_folder={
 }
 
 # Load the whole dataset and get the tokenwise rationales
-def get_training_data(data, params_data):
+def get_training_data(data, params_data, no_tokenizer=False):
 
     if params_data['bert_tokens']:
         print('Loading BERT tokenizer...')
@@ -30,7 +30,16 @@ def get_training_data(data, params_data):
         annotation_list = [row['label1'], row['label2'], row['label3']]
 
         if annotation != 'undecided':
-            tokens_all, attention_masks = returnMask(row, params_data, tokenizer)
+            if not no_tokenizer:
+                tokens_all, attention_masks = returnMask(row, params_data, tokenizer)
+            else:
+                tokens_all = row["text"]
+                attention_masks = []
+                for rationale in row["rationales"]:
+                    attention_masks.append(rationale)
+                if len(attention_masks) < 3:
+                    for _ in range(3 - len(attention_masks)):
+                        attention_masks.append([0 for _ in range(len(tokens_all))])
             final_binny_output.append([post_id, annotation, tokens_all, attention_masks, annotation_list])
 
     return final_binny_output
@@ -141,6 +150,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("--bert", "-b", help="Use bert tokenizer", action="store_true", default=False)
     arg_parser.add_argument("--save_path", "-s", help="Where to save the output", default=os.path.join(os.path.dirname(__file__), "Data/Evaluation/Model_Eval/"))
     arg_parser.add_argument("--keep_neutral", "-kn", action="store_true", default=False, help="Keep the neutral instances.")
+    arg_parser.add_argument("--no_tokenizer", "-nt", action="store_true", default=False, help="Do not use any tokenizer, keep the text and rationales as they are.")
     args = arg_parser.parse_args()
 
     method = 'union'
@@ -173,6 +183,6 @@ if __name__ == "__main__":
     params['not_recollect'] = True
 
     data_all_labelled = get_annotated_data(params)
-    training_data = get_training_data(data_all_labelled, params)
+    training_data = get_training_data(data_all_labelled, params, args.no_tokenizer)
 
     convert_to_eraser_format(training_data, method, save_split, save_path, id_division, keep_neutral)
