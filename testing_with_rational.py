@@ -382,6 +382,19 @@ if __name__ == "__main__":
         default=False,
         help="keep neutral parts of the dataset",
     )
+    my_parser.add_argument(
+        "--bert_mask",
+        "-bm",
+        action="store_true",
+        default=False,
+        help="replace the rationale/not rationale with mask token instead of deleting it"
+    )
+    my_parser.add_argument(
+        "--test_data",
+        "-td",
+        type=str,
+        help="data to use for evaluation, defaults to the test portion of the data inn the json file"
+    )
 
     args = my_parser.parse_args()
 
@@ -396,17 +409,36 @@ if __name__ == "__main__":
     fix_the_random(seed_val=params["random_seed"])
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
+    if args.test_data is not None:
+        data_file = args.test_data
+    else:
+        data_file = params["data_file"]
     # test_data=get_test_data(temp_read,params,message='text')
-    final_list_dict = get_final_dict_with_rational(params, params["data_file"], topk=5, keep=args.keep_neutral)
+    final_list_dict = get_final_dict_with_rational(params, data_file, topk=5, keep=args.keep_neutral)
 
     path_name = model_to_use
-    path_name_explanation = (
-        "explanations_dicts/"
-        + path_name.split("/")[1].split(".")[0]
-        + "_"
-        + str(params["att_lambda"])
-        + "_explanation_top5.json"
-    )
+    if args.test_data is None:
+        path_name_explanation = (
+            "explanations_dicts/"
+            + path_name.split("/")[1].split(".")[0]
+            + "_"
+            + os.path.basename(data_file).split(".")[0]
+            + "_"
+            + str(params["att_lambda"])
+            + "_explanation_top5.json"
+        )
+    else:
+        path_name_explanation = (
+                "explanations_dicts/"
+                + path_name.split("/")[1].split(".")[0]
+                + "_"
+                + str(params["att_lambda"])
+                + "_explanation_top5")
+
+        if args.bert_mask:
+            path_name_explanation += "_bert_mask.json"
+        else:
+            path_name_explanation += ".json"
     os.makedirs(os.path.dirname(path_name_explanation), exist_ok=True)
     with open(path_name_explanation, "w") as fp:
         fp.write("\n".join(json.dumps(i, cls=NumpyEncoder) for i in final_list_dict))

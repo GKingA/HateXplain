@@ -368,7 +368,6 @@ def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mas
         ele1["comprehensiveness_classification_scores"] = ele3["classification_scores"]
         final_list_dict.append(ele1)
     return final_list_dict
-    return list_dict_org
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -454,17 +453,21 @@ if __name__ == "__main__":
     keep_neutral = args.keep_neutral
     params["data_file"] = dict_data_folder[str(params["num_classes"])]["data_file"] if "data_file" not in params else params["data_file"]
     if args.test_data is not None:
-        params["data_file"] = args.test_data
+        data_file = args.test_data
+    else:
+        data_file = params["data_file"]
     params["class_names"] = dict_data_folder[str(params["num_classes"])]["class_label"]
     params["num_samples"] = args.num_samples
     params["variance"] = 1
     #params["device"] = "cpu"
     fix_the_random(seed_val=params["random_seed"])
-    temp_read = get_annotated_data(params)
+    params_copy = params.copy()
+    params_copy["data_file"] = data_file
+    temp_read = get_annotated_data(params_copy)
     with open("Data/post_id_divisions.json", "r") as fp:
         post_id_dict = json.load(fp)
     temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["test"])]
-    test_data = get_test_data(temp_read, params, message="text")
+    test_data = get_test_data(temp_read, params_copy, message="text")
     final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5, bert_mask=args.bert_mask)
     path_name = model_to_use
     if args.test_data is None and not args.bert_mask:
@@ -482,7 +485,7 @@ if __name__ == "__main__":
             "explanations_dicts/"
             + path_name.split("/")[1].split(".")[0]
             + "_explanation_with_lime_"
-            + os.path.basename(params["data_file"]).split(".")[0]
+            + os.path.basename(data_file).split(".")[0]
             + "_"
             + str(params["num_samples"])
             + "_"
