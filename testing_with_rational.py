@@ -304,19 +304,19 @@ def standaloneEval_with_rational(
 
 def get_final_dict_with_rational(params, test_data=None, topk=5, keep=False, test=False):
     list_dict_org, test_data = standaloneEval_with_rational(
-        params, extra_data_path=test_data, topk=topk, keep=keep, test=test
+        params, extra_data_path=test_data, topk=topk, keep=keep, use_test=test
     )
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk
     )
     list_dict_with_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_with_rational, topk=topk, keep=keep, use_ext_df=True, test=test
+        params, test_data=test_data_with_rational, topk=topk, keep=keep, use_ext_df=True, use_test=test
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk
     )
     list_dict_without_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_without_rational, topk=topk, keep=keep, use_ext_df=True, test=test
+        params, test_data=test_data_without_rational, topk=topk, keep=keep, use_ext_df=True, use_test=test
     )
     final_list_dict = []
     for ele1, ele2, ele3 in zip(
