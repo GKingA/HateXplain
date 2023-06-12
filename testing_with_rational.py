@@ -92,7 +92,7 @@ def select_model(params, embeddings):
 
 
 def standaloneEval_with_rational(
-    params, test_data=None, extra_data_path=None, topk=2, keep=False, use_ext_df=False
+    params, test_data=None, extra_data_path=None, topk=2, keep=False, use_ext_df=False, use_test=False
 ):
     #     device = torch.device("cpu")
     if torch.cuda.is_available() and params["device"] == "cuda":
@@ -116,7 +116,10 @@ def standaloneEval_with_rational(
         params["vocab_size"] = vocab_own.embeddings.shape[0]
         embeddings = vocab_own.embeddings
     if params["auto_weights"]:
-        y_test = [ele[2] for ele in test]
+        if use_test:
+            y_test = [ele[2] for ele in test]
+        else:
+            y_test = [ele[2] for ele in val]
         encoder = LabelEncoder()
         encoder.classes_ = np.load(dict_data_folder[str(params["num_classes"])]["class_label"], allow_pickle=True)
         params["weights"] = class_weight.compute_class_weight(
@@ -132,14 +135,15 @@ def standaloneEval_with_rational(
         temp_read = get_annotated_data(params_dash)
         with open("Data/post_id_divisions.json", "r") as fp:
             post_id_dict = json.load(fp)
+        partition = "test" if use_test else "val"
         if not keep:
             temp_read = temp_read[
-                temp_read["post_id"].isin(post_id_dict["test"])
+                temp_read["post_id"].isin(post_id_dict[partition])
                 & (temp_read["final_label"].isin(["hatespeech", "offensive", "toxic"]))
             ]
         else:
             temp_read = temp_read[
-                temp_read["post_id"].isin(post_id_dict["test"])
+                temp_read["post_id"].isin(post_id_dict[partition])
             ]
         test_data = get_test_data(temp_read, params, message="text")
         test_extra = encodeData(test_data, vocab_own, params)
@@ -298,21 +302,21 @@ def standaloneEval_with_rational(
 # In[115]:
 
 
-def get_final_dict_with_rational(params, test_data=None, topk=5, keep=False):
+def get_final_dict_with_rational(params, test_data=None, topk=5, keep=False, test=False):
     list_dict_org, test_data = standaloneEval_with_rational(
-        params, extra_data_path=test_data, topk=topk, keep=keep
+        params, extra_data_path=test_data, topk=topk, keep=keep, test=test
     )
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk
     )
     list_dict_with_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_with_rational, topk=topk, keep=keep, use_ext_df=True
+        params, test_data=test_data_with_rational, topk=topk, keep=keep, use_ext_df=True, test=test
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk
     )
     list_dict_without_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_without_rational, topk=topk, keep=keep, use_ext_df=True
+        params, test_data=test_data_without_rational, topk=topk, keep=keep, use_ext_df=True, test=test
     )
     final_list_dict = []
     for ele1, ele2, ele3 in zip(
@@ -395,6 +399,12 @@ if __name__ == "__main__":
         type=str,
         help="data to use for evaluation, defaults to the test portion of the data inn the json file"
     )
+    my_parser.add_argument(
+        "--test",
+        "-t",
+        action="store_true",
+        help="whether to run the test on the test portion of the dataset. Default is validation."
+    )
 
     args = my_parser.parse_args()
 
@@ -414,7 +424,7 @@ if __name__ == "__main__":
     else:
         data_file = params["data_file"]
     # test_data=get_test_data(temp_read,params,message='text')
-    final_list_dict = get_final_dict_with_rational(params, data_file, topk=5, keep=args.keep_neutral)
+    final_list_dict = get_final_dict_with_rational(params, data_file, topk=5, keep=args.keep_neutral, test=args.test)
 
     path_name = model_to_use
     if args.test_data is None:
