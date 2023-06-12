@@ -126,14 +126,17 @@ class modelPred:
             self.model.cuda()
         self.model.eval()
 
-    def return_probab(self, sentences_list):
+    def return_probab(self, sentences_list, test=False):
         """Input: should be a list of sentences"""
         """Ouput: probablity values"""
         params = self.params
         device = self.device
 
         if params["auto_weights"]:
-            y_test = [ele[2] for ele in self.test]
+            if test:
+                y_test = [ele[2] for ele in self.test]
+            else:
+                y_test = [ele[2] for ele in self.val]
             encoder = LabelEncoder()
             encoder.classes_ = np.load(dict_data_folder[str(params['num_classes'])]["class_label"], allow_pickle=True)
             params["weights"] = class_weight.compute_class_weight(
@@ -207,7 +210,7 @@ class modelPred:
 
 
 def standaloneEval_with_lime(
-    params, model_to_use, test_data=None, keep=False, topk=2, rational=False
+    params, model_to_use, test_data=None, keep=False, topk=2, rational=False, test=False
 ):
     encoder = LabelEncoder()
     encoder.classes_ = np.load(dict_data_folder[str(params["num_classes"])]["class_label"], allow_pickle=True)
@@ -240,7 +243,7 @@ def standaloneEval_with_lime(
             sentence_list.append(sentence)
             post_id_list.append(row["Post_id"])
 
-        probab_list = modelClass.return_probab(sentence_list)
+        probab_list = modelClass.return_probab(sentence_list, test=test)
         for post_id, proba in zip(post_id_list, list(probab_list)):
             temp = {}
             temp["annotation_id"] = post_id
@@ -339,15 +342,15 @@ def standaloneEval_with_lime(
 # In[115]:
 
 
-def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mask):
+def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mask, test):
     list_dict_org, test_data = standaloneEval_with_lime(
-        params, model_name, test_data=test_data, keep=keep, topk=topk
+        params, model_name, test_data=test_data, keep=keep, topk=topk, test=test
     )
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk, bert_mask=bert_mask
     )
     list_dict_with_rational, _ = standaloneEval_with_lime(
-        params, model_name, test_data=test_data_with_rational, keep=keep, topk=topk, rational=True
+        params, model_name, test_data=test_data_with_rational, keep=keep, topk=topk, rational=True, test=test
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk, bert_mask=bert_mask
@@ -359,6 +362,7 @@ def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mas
         keep=keep,
         topk=topk,
         rational=True,
+        test=test
     )
     final_list_dict = []
     for ele1, ele2, ele3 in zip(
@@ -440,7 +444,13 @@ if __name__ == "__main__":
         "--test_data",
         "-td",
         type=str,
-        help="data to use for evaluation, defaults to the test portion of the data inn the json file"
+        help="data to use for evaluation, defaults to the validation/test portion of the data in the json file"
+    )
+    my_parser.add_argument(
+        "--test",
+        "-t",
+        action="store_true",
+        help="whether to run the test on the test portion of the dataset. Default is validation."
     )
 
     args = my_parser.parse_args()
@@ -466,9 +476,12 @@ if __name__ == "__main__":
     temp_read = get_annotated_data(params_copy)
     with open("Data/post_id_divisions.json", "r") as fp:
         post_id_dict = json.load(fp)
-    temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["test"])]
+    if args.test:
+        temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["test"])]
+    else:
+        temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["val"])]
     test_data = get_test_data(temp_read, params_copy, message="text")
-    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5, bert_mask=args.bert_mask)
+    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5, bert_mask=args.bert_mask, test=args.test)
     path_name = model_to_use
     if args.test_data is None and not args.bert_mask:
         path_name_explanation = (
