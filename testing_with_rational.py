@@ -92,7 +92,7 @@ def select_model(params, embeddings):
 
 
 def standaloneEval_with_rational(
-    params, test_data=None, extra_data_path=None, topk=2, keep=False, use_ext_df=False, use_test=False
+    params, test_data=None, extra_data_path=None, topk=2, keep=False, use_ext_df=False, use_test=False, negative_rationale=False
 ):
     #     device = torch.device("cpu")
     if torch.cuda.is_available() and params["device"] == "cuda":
@@ -284,16 +284,25 @@ def standaloneEval_with_rational(
         temp_hard_rationales = []
         for ind in topk_indicies:
             temp_hard_rationales.append({"end_token": ind + 1, "start_token": ind})
-
-        temp["rationales"] = [
-            {
-                "docid": post_id,
-                "hard_rationale_predictions": temp_hard_rationales,
-                "soft_rationale_predictions": attention,
-                # "soft_sentence_predictions":[1.0],
-                "truth": ground_truth,
-            }
-        ]
+        if not negative_rationale or (negative_rationale and pred_label in ["toxic", "hatespeech", "offensive"]):
+            temp["rationales"] = [
+                {
+                    "docid": post_id,
+                    "hard_rationale_predictions": temp_hard_rationales,
+                    "soft_rationale_predictions": attention,
+                    # "soft_sentence_predictions":[1.0],
+                    "truth": ground_truth,
+                }
+            ]
+        else:
+            temp["rationales"] = [
+                {
+                    "docid": post_id,
+                    "hard_rationale_predictions": [],
+                    "soft_rationale_predictions": [0 for _ in attention],
+                    "truth": ground_truth,
+                }
+            ]
         list_dict.append(temp)
 
     return list_dict, test_data
@@ -302,21 +311,21 @@ def standaloneEval_with_rational(
 # In[115]:
 
 
-def get_final_dict_with_rational(params, test_data=None, topk=5, keep=False, test=False):
+def get_final_dict_with_rational(params, test_data=None, topk=5, keep=False, test=False, negative_rationale=False):
     list_dict_org, test_data = standaloneEval_with_rational(
-        params, extra_data_path=test_data, topk=topk, keep=keep, use_test=test
+        params, extra_data_path=test_data, topk=topk, keep=keep, use_test=test, negative_rationale=negative_rationale
     )
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk
     )
     list_dict_with_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_with_rational, topk=topk, keep=keep, use_ext_df=True, use_test=test
+        params, test_data=test_data_with_rational, topk=topk, keep=keep, use_ext_df=True, use_test=test, negative_rationale=negative_rationale
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk
     )
     list_dict_without_rational, _ = standaloneEval_with_rational(
-        params, test_data=test_data_without_rational, topk=topk, keep=keep, use_ext_df=True, use_test=test
+        params, test_data=test_data_without_rational, topk=topk, keep=keep, use_ext_df=True, use_test=test, negative_rationale=negative_rationale
     )
     final_list_dict = []
     for ele1, ele2, ele3 in zip(
@@ -405,6 +414,12 @@ if __name__ == "__main__":
         action="store_true",
         help="whether to run the test on the test portion of the dataset. Default is validation."
     )
+    my_parser.add_argument(
+        "--negative_rationale",
+        "-nr",
+        action="store_true",
+        help="Whether to leave out the negative rationale's prediction or keep them. Default keeps them."
+    )
 
     args = my_parser.parse_args()
 
@@ -424,16 +439,18 @@ if __name__ == "__main__":
     else:
         data_file = params["data_file"]
     # test_data=get_test_data(temp_read,params,message='text')
-    final_list_dict = get_final_dict_with_rational(params, data_file, topk=5, keep=args.keep_neutral, test=args.test)
+    final_list_dict = get_final_dict_with_rational(params, data_file, topk=5, keep=args.keep_neutral, test=args.test, negative_rationale=args.negative_rationale)
 
     path_name = model_to_use
+    additive = "_" if not args.negative_rationale else "_not_neg_"
     if args.test_data is None:
         path_name_explanation = (
             "explanations_dicts/"
             + path_name.split("/")[1].split(".")[0]
             + "_"
             + str(params["att_lambda"])
-            + "_explanation_top5.json"
+            + additive
+            + "explanation_top5.json"
         )
     else:
         path_name_explanation = (
@@ -441,7 +458,8 @@ if __name__ == "__main__":
                 + path_name.split("/")[1].split(".")[0]
                 + "_"
                 + str(params["att_lambda"])
-                + "_explanation_top5_"
+                + additive
+                + "explanation_top5_"
                 + os.path.basename(data_file).split(".")[0]
         )
 
