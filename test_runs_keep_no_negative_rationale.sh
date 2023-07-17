@@ -1,0 +1,39 @@
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnn_2_class_women_majority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnn_2_class_women_minority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnn_2_class_women_minority_pure.json 100 1 -kn -nr
+
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnnatt_2_class_women_majority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnnatt_2_class_women_minority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnnatt_2_class_women_minority_pure.json 100 1 -kn -nr
+
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnnscrat_2_class_women_majority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnnscrat_2_class_women_minority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_birnnscrat_2_class_women_minority_pure.json 100 1 -kn -nr
+
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_cnn_gru_2_class_women_majority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_cnn_gru_2_class_women_minority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_cnn_gru_2_class_women_minority_pure.json 100 1 -kn -nr
+
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE_2_class_women_majority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE_2_class_women_minority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE_2_class_women_minority_pure.json 100 1 -kn -nr
+
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE_2_class_women_majority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE_2_class_women_minority_all.json 100 1 -kn -nr
+CUDA_VISIBLE_DEVICES=1 python3 testing_with_lime.py best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE_2_class_women_minority_pure.json 100 1 -kn -nr
+
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_birnnatt_2_class_women_majority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_birnnatt_2_class_women_minority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_birnnatt_2_class_women_minority_pure.json 1 -kn -nr
+
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_birnnscrat_2_class_women_majority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_birnnscrat_2_class_women_minority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_birnnscrat_2_class_women_minority_pure.json 1 -kn -nr
+
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE_2_class_women_majority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE_2_class_women_minority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_bert_base_uncased_Attn_train_TRUE_2_class_women_minority_pure.json 1 -kn -nr
+
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE_2_class_women_majority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE_2_class_women_minority_all.json 1 -kn -nr
+#CUDA_VISIBLE_DEVICES=1 python3 testing_with_rational.py best_model_json/bestModel_bert_base_uncased_Attn_train_FALSE_2_class_women_minority_pure.json 1 -kn -nr
