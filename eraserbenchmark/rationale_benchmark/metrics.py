@@ -164,7 +164,7 @@ def partial_match_score(
     instance (annotation + document) precisions and recalls, averaging those,
     and finally computing an F1 of the resulting average.
     """
-
+    print("IN IOU")
     ann_to_rat = _keyed_rationale_from_list(truth)
     pred_to_rat = _keyed_rationale_from_list(pred)
 
@@ -797,7 +797,7 @@ def _has_hard_predictions(results: List[dict]) -> bool:
         and len(results[0]["rationales"]) > 0
         and "hard_rationale_predictions" in results[0]["rationales"][0]
         and results[0]["rationales"][0]["hard_rationale_predictions"] is not None
-        and len(results[0]["rationales"][0]["hard_rationale_predictions"]) > 0
+        #and len(results[0]["rationales"][0]["hard_rationale_predictions"]) > 0
     )
 
 

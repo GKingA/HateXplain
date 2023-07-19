@@ -210,7 +210,7 @@ class modelPred:
 
 
 def standaloneEval_with_lime(
-    params, model_to_use, test_data=None, keep=False, topk=2, rational=False, test=False
+    params, model_to_use, test_data=None, keep=False, topk=2, rational=False, test=False, negative_rationale=False
 ):
     encoder = LabelEncoder()
     encoder.classes_ = np.load(dict_data_folder[str(params["num_classes"])]["class_label"], allow_pickle=True)
@@ -233,6 +233,7 @@ def standaloneEval_with_lime(
         for index, row in tqdm(test_data.iterrows(), total=len(test_data)):
             # print(row)
             if not keep and (row["Label"] == "normal" or row["Label"] == "non-toxic"):
+                print(keep)
                 continue
             if params["bert_tokens"]:
                 tokens = tokenizer.convert_ids_to_tokens(row["Text"])[1:-1]
@@ -325,15 +326,25 @@ def standaloneEval_with_lime(
             for ind in topk_indicies:
                 temp_hard_rationales.append({"end_token": ind + 1, "start_token": ind})
 
-            temp["rationales"] = [
-                {
-                    "docid": row["Post_id"],
-                    "hard_rationale_predictions": temp_hard_rationales,
-                    "soft_rationale_predictions": attention,
-                    # "soft_sentence_predictions":[1.0],
-                    "truth": 0,
-                }
-            ]
+            if not negative_rationale or (negative_rationale and pred_label in ["toxic", "hatespeech", "offensive"]):
+                temp["rationales"] = [
+                    {
+                        "docid": row["Post_id"],
+                        "hard_rationale_predictions": temp_hard_rationales,
+                        "soft_rationale_predictions": attention,
+                        # "soft_sentence_predictions":[1.0],
+                        "truth": 0,
+                    }
+                ]
+            else:
+                temp["rationales"] = [
+                    {
+                        "docid": row["Post_id"],
+                        "hard_rationale_predictions": [],
+                        "soft_rationale_predictions": [0 for _ in attention],
+                        "truth": 0,
+                    }
+                ]
             list_dict.append(temp)
     print(len(test_data))
     return list_dict, test_data
@@ -342,15 +353,15 @@ def standaloneEval_with_lime(
 # In[115]:
 
 
-def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mask, test):
+def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mask, test, negative_rationale=False):
     list_dict_org, test_data = standaloneEval_with_lime(
-        params, model_name, test_data=test_data, keep=keep, topk=topk, test=test
+        params, model_name, test_data=test_data, keep=keep, topk=topk, test=test, negative_rationale=negative_rationale
     )
     test_data_with_rational = convert_data(
         test_data, params, list_dict_org, rational_present=True, topk=topk, bert_mask=bert_mask
     )
     list_dict_with_rational, _ = standaloneEval_with_lime(
-        params, model_name, test_data=test_data_with_rational, keep=keep, topk=topk, rational=True, test=test
+        params, model_name, test_data=test_data_with_rational, keep=keep, topk=topk, rational=True, test=test, negative_rationale=negative_rationale
     )
     test_data_without_rational = convert_data(
         test_data, params, list_dict_org, rational_present=False, topk=topk, bert_mask=bert_mask
@@ -362,7 +373,8 @@ def get_final_dict_with_lime(params, model_name, test_data, keep, topk, bert_mas
         keep=keep,
         topk=topk,
         rational=True,
-        test=test
+        test=test,
+        negative_rationale=negative_rationale
     )
     final_list_dict = []
     for ele1, ele2, ele3 in zip(
@@ -452,6 +464,12 @@ if __name__ == "__main__":
         action="store_true",
         help="whether to run the test on the test portion of the dataset. Default is validation."
     )
+    my_parser.add_argument(
+        "--negative_rationale",
+        "-nr",
+        action="store_true",
+        help="Whether to leave out the negative rationale's prediction or keep them. Default keeps them."
+    )
 
     args = my_parser.parse_args()
 
@@ -481,13 +499,15 @@ if __name__ == "__main__":
     else:
         temp_read = temp_read[temp_read["post_id"].isin(post_id_dict["val"])]
     test_data = get_test_data(temp_read, params_copy, message="text")
-    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5, bert_mask=args.bert_mask, test=args.test)
+    final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5, bert_mask=args.bert_mask, test=args.test, negative_rationale=args.negative_rationale)
     path_name = model_to_use
+    additive = "_" if not args.negative_rationale else "_not_neg_"
     if args.test_data is None and not args.bert_mask:
         path_name_explanation = (
             "explanations_dicts/"
             + path_name.split("/")[1].split(".")[0]
-            + "_explanation_with_lime_"
+            + additive
+            + "explanation_with_lime_"
             + str(params["num_samples"])
             + "_"
             + str(params["att_lambda"])
@@ -497,7 +517,8 @@ if __name__ == "__main__":
         path_name_explanation = (
             "explanations_dicts/"
             + path_name.split("/")[1].split(".")[0]
-            + "_explanation_with_lime_"
+            + additive
+            + "explanation_with_lime_"
             + os.path.basename(data_file).split(".")[0]
             + "_"
             + str(params["num_samples"])
