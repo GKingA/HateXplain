@@ -1,74 +1,86 @@
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fpunyajoy%2FHateXplain&count_bg=%2379C83D&title_bg=%23555555&icon=expertsexchange.svg&icon_color=%23E7E7E7&title=Visits&edge_flat=false)](https://hits.seeyoufarm.com)
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/hatexplain-a-benchmark-dataset-for/hate-speech-detection-on-hatexplain)](https://paperswithcode.com/sota/hate-speech-detection-on-hatexplain?p=hatexplain-a-benchmark-dataset-for)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
-[![PyPI license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://pypi.python.org/pypi/ansicolortags/)
-[![Generic badge](https://img.shields.io/badge/Dataset-Hatexplain-red.svg)](https://huggingface.co/datasets/hatexplain)
-[![Generic badge](https://img.shields.io/badge/Models-Hatexplain-blue.svg)](https://huggingface.co/models?search=hatexplain)
+# Recreating our results
+
+The following readme is meant to give guidance to recreate 
+the results in our paper. The HateXplain readme can be found under
+HateXplain_README.md in this repository.
+
+## Preparations
+
+To run the deep learning systems, you will need to create a 
+virtual environment using requirements.txt
+For the rule based system and the preprocessing you need to install
+the [POTATO](https://pypi.org/project/xpotato/) and the 
+[imodels](https://pypi.org/project/imodels/) libraries in a different 
+environment.
 
 
-# :mag_right: HateXplain: A Benchmark Dataset for Explainable Hate Speech Detection [Accepted at AAAI 2021]
+## Preprocessing
 
-### :tada: :tada: BERT for detecting abusive language(Hate speech+offensive) and predicting rationales is uploaded [here](https://huggingface.co/Hate-speech-CNERG/bert-base-uncased-hatexplain-rationale-two). Be sure to check it out :tada: :tada:.
+For this step, you don't need the virtual environment.
 
-#### For more details about our paper
+To create the relabeled dataset, run the relabelTargetFocus.py 
+script found in the Preprocess folder.
 
-Binny Mathew, Punyajoy Saha, Seid Muhie Yimam, Chris Biemann, Pawan Goyal, and Animesh Mukherjee "[HateXplain: A Benchmark Dataset for Explainable Hate Speech Detection](https://ojs.aaai.org/index.php/AAAI/article/view/17745)". Accepted at AAAI 2021.
+```bash
+python3 relabelTargetFocus.py [-h] --data_path DATA_PATH
+                              [--split_path SPLIT_PATH]
+                              [--mode {distinct,process,both}]
+                              [--target {african,arab,asian,caucasian,christian,disability,economic,hindu,hispanic,homosexual,indian,islam,jewish,men,other,refugee,women}]
+                              [--create_features] [--keep_disagreement]
+                              [--remove_by_purity] [--graph_path GRAPH_PATH]
 
-[Arxiv paper link](https://arxiv.org/abs/2012.10289)
-# Abstract
+options:
+  -h, --help            show this help message and exit
+  --data_path DATA_PATH, -d DATA_PATH
+                        Path to the json dataset.
+  --split_path SPLIT_PATH, -s SPLIT_PATH
+                        Path of the official split.
+  --mode {distinct,process,both}, -m {distinct,process,both}
+                        Mode to start the program. Modes: - distinct: cut the
+                        dataset.json into distinct categorical json files -
+                        process: load the chosen category as the target and
+                        every other one as non-target - both: run the distinct
+                        and the process after eachother
+  --target {african,arab,asian,caucasian,christian,disability,economic,hindu,hispanic,homosexual,indian,islam,jewish,men,other,refugee,women}, -t {african,arab,asian,caucasian,christian,disability,economic,hindu,hispanic,homosexual,indian,islam,jewish,men,other,refugee,women}
+                        The target group to set as our category.
+  --create_features, -cf
+                        Whether to create train features based on the UD
+                        graphs.
+  --keep_disagreement, -kd
+                        Whether to keep the data instances, where the
+                        annotators all annotated with different labels.
+  --remove_by_purity, -rp
+                        Whether to remove the instances by purity, shrinking
+                        the size of the dataset.
+  --graph_path GRAPH_PATH, -gp GRAPH_PATH
+                        Previously parsed graphs in the same data format as
+                        the distinct mode produces
+```
 
-Hate speech is a challenging issue plaguing the online social media. While better models for hate speech detection are continuously being developed, there is little research on the bias and interpretability aspects of hate speech. In this work, we introduce HateXplain, the first benchmark hate speech dataset covering multiple aspects of the issue. Each post in our dataset is annotated from three different perspectives: the basic, commonly used 3-class classification (i.e., hate, offensive or normal), the target community (i.e., the community that has been the victim of hate speech/offensive speech in the post), and the rationales, i.e., the portions of the post on which their labelling decision (as hate, offensive or normal) is based. We utilize existing state-of-the-art models and observe that even models that perform very well in classification do not score high on explainability metrics like model plausibility and faithfulness. We also observe that models, which utilize the human rationales for training, perform better in reducing unintended bias towards target communities. 
+To create the updated config files, run the reconfig_config_files script.
+This only changes the dataset used as base and sets the number of classes
+to two.
+```bash
+python3 reconfig_config_files.py [-h] [--config_dir CONFIG_DIR]
+                                 [--target_dir TARGET_DIR]
 
-***WARNING: The repository contains content that are offensive and/or hateful in nature.***
+options:
+  -h, --help            show this help message and exit
+  --config_dir CONFIG_DIR, -c CONFIG_DIR
+                        Directory of the config files
+  --target_dir TARGET_DIR, -t TARGET_DIR
+                        Name of the target directory, if you wish to train on
+                        relabeled data, that only considers text against the
+                        target offensive
+``` 
 
-<p align="center"><img src="Figures/dataset_example.png" width="350" height="300"></p>
+## Training
 
-**Please cite our paper in any published work that uses any of these resources.**
+To train the deep learning models you can run the 
+manual_training_inference script wih each of the new config files. 
 
-~~~bibtex
-
-@inproceedings{mathew2021hatexplain,
-  title={HateXplain: A Benchmark Dataset for Explainable Hate Speech Detection},
-  author={Mathew, Binny and Saha, Punyajoy and Yimam, Seid Muhie and Biemann, Chris and Goyal, Pawan and Mukherjee, Animesh},
-  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
-  volume={35},
-  number={17},
-  pages={14867--14875},
-  year={2021}
-}
-
-~~~
-
-------------------------------------------
-***Folder Description*** :open_file_folder:	
-------------------------------------------
-~~~
-
-./Data                --> Contains the dataset related files.
-./Models              --> Contains the codes for all the classifiers used
-./Preprocess  	      --> Contains the codes for preprocessing the dataset	
-./best_model_json     --> Contains the parameter values for the best models
-
-~~~
-------------------------------------------
-***Table of contents*** :bookmark_tabs:
-------------------------------------------
-
-:bookmark: [**Dataset**](Data/README.md) :- This describes the dataset format and setup for the dataset pipeline.
-
-:bookmark: [**Parameters**](Parameters_description.md) :- This describes all the different parameter that are used in this code
-
-------------------------------------------
-***Usage instructions*** 
-------------------------------------------
-please setup the **Dataset** first (more important if your using non-bert model). Install the libraries using the following command (preferably inside an environemt)
-~~~
-pip install -r requirements.txt
-~~~
-#### Training
-To train the model use the following command.
-~~~
-usage: manual_training_inference.py [-h]
+```bash
+python3 manual_training_inference.py [-h]
                                     --path_to_json --use_from_file
                                     --attention_lambda
 
@@ -80,26 +92,41 @@ positional arguments:
                       from file
   --attention_lambda  required to assign the contribution of the atention loss
 
-~~~
-You can either set the parameters present in the python file, option will be (--use_from_file set to True). To change the parameters, check the **Parameters** section for more details. The code will run on CPU by default. The recommended way will be to copy one of the dictionary in `best_model_json` and change it accordingly.
+optional arguments:
+  -h, --help          show this help message and exit
+```
 
-* **For transformer models** :-The repository current supports the model having similar tokenization as [BERT](https://huggingface.co/transformers/model_doc/bert.html). In the params set `bert_tokens` to True and `path_files` to any of BERT based models in [Huggingface](https://huggingface.co/). 
-* **For non-transformer models** :-The repository current supports the LSTM, LSTM attention and CNN GRU models. In the params set `bert_tokens` to False and model name according to **Parameters** section (either birnn, birnnatt, birnnscrat, cnn_gru).
+The rule based systems can be created with the choose_features script.
 
-For more details about the end to end pipleline visit [our_demo](https://github.com/punyajoy/HateXplain/blob/master/Example_HateExplain.ipynb)
+```bash
+python3 choose_features.py [-h] [--train_dir TRAIN_DIR] [--target TARGET]
 
-### Blogs and github repos which we used for reference :angel:
-1. For finetuning BERT this [blog](https://mccormickml.com/2019/07/22/BERT-fine-tuning/)  by Chris McCormick is used and we also referred [Transformers github repo](https://github.com/huggingface/transformers).
-2. For CNN-GRU model we used the original [repo](https://github.com/ziqizhang/chase) for reference.
-3. For Evaluation using the Explanantion metrics we used the ERASER benchmark [repo](https://github.com/jayded/eraserbenchmark). Please look into their repo and paper for more details.
+options:
+  -h, --help            show this help message and exit
+  --train_dir TRAIN_DIR, -t TRAIN_DIR
+                        The directory of the training files
+  --target TARGET, -tar TARGET
+                        The target of the hate
+```
 
+## Evaluation
 
-### Todos
-- [x] Add arxiv paper link and description.
-- [ ] Release better documentation for Models and Preprocess sections.
-- [ ] Add other Transformers model to the pipeline.
-- [x] Upload our model to [transformers community](https://huggingface.co/models) to make them public
-- [x] Create an interface for **social scientists** where they can use our models easily with their data
+To create the predictions for the deep learning system, 
+run the test_runs.sh script. This will create the predictions over
+the ground truth portion of the dataset.
+To create predictions over the whole dataset run test_runs_keep.sh
 
+```bash
+./test_runs.sh
+./test_runs_keep.sh
+```
 
-#####  :thumbsup: The repo is still in active developements. Feel free to create an [issue](https://github.com/punyajoy/HateXplain/issues) !!  :thumbsup:
+The rules' output can be generated with rules_testing.py
+
+Then we can generate the final scores with test_eraser 
+and test_eraser_rule_no_keep
+
+```bash
+./test_eraser.sh
+./test_eraser_rule_no_keep.sh
+```

@@ -502,11 +502,13 @@ if __name__ == "__main__":
     final_dict = get_final_dict_with_lime(params, model_to_use, test_data, keep_neutral, topk=5, bert_mask=args.bert_mask, test=args.test, negative_rationale=args.negative_rationale)
     path_name = model_to_use
     additive = "_" if not args.negative_rationale else "_not_neg_"
+    kn = "" if not args.keep_neutral else "_keep_neutral_"
     if args.test_data is None and not args.bert_mask:
         path_name_explanation = (
             "explanations_dicts/"
             + path_name.split("/")[1].split(".")[0]
             + additive
+            + kn
             + "explanation_with_lime_"
             + str(params["num_samples"])
             + "_"
@@ -518,6 +520,7 @@ if __name__ == "__main__":
             "explanations_dicts/"
             + path_name.split("/")[1].split(".")[0]
             + additive
+            + kn
             + "explanation_with_lime_"
             + os.path.basename(data_file).split(".")[0]
             + "_"

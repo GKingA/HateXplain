@@ -158,7 +158,7 @@ def decision_tree(feature_vectors: List[List[int]], labels: List[int], feature_n
     plt.show()
 
 
-def create_features(majmin: str, pureall: str, type_name: str, base_path_train: str, gen_method: Any) -> None:
+def create_features(majmin: str, pureall: str, type_name: str, base_path_train: str, gen_method: Any, target: str) -> None:
     train_file = os.path.join(base_path_train, f"{majmin}_train_{pureall}.tsv")
     with open(f"{type_name}_{majmin}_{pureall}.tsv", "r") as all_bow:
         names = all_bow.readline().strip().split('\t')
@@ -174,7 +174,7 @@ def create_features(majmin: str, pureall: str, type_name: str, base_path_train: 
         generated_features = gen_method(feat, labels, names, max_depth=i)
         with open(os.path.join(f"{type_name}_features", f"{type_name}_{majmin}_{pureall}_{i}.json"),
                   "w") as out_features:
-            json.dump({"Women": generated_features}, out_features)
+            json.dump({target.capitalize(): generated_features}, out_features)
 
 
 def calculate_graph_validation(majmin: str, pureall: str, type_name: str, base_path_train: str, target: str, length: int) -> None:
@@ -225,17 +225,14 @@ def best(voting, filtering, type_name):
     print(f"\n{type_name} {voting} {filtering}")
     print(f"F1 {np.argmax(f1)+1}: {max(f1)}\nP {np.argmax(p)+1}: {max(p)}\nR {np.argmax(r)+1}: {max(r)}\n"
           f"P {np.argmax(f1)+1}: {p[np.argmax(f1)]}\nR {np.argmax(f1)+1}: {r[np.argmax(f1)]}")
-    x = [f'{xx}' for xx in np.arange(1, np.argmax(r)+1)]
-    plt.figure(figsize=(15, 10))
-    plt.plot(np.asarray(x, float), f1[:np.argmax(r)], label="F1-score")
-    plt.plot(np.asarray(x, float), p[:np.argmax(r)], label="Precision")
-    plt.plot(np.asarray(x, float), r[:np.argmax(r)], label="Recall")
-    plt.legend()
-    plt.savefig(f"/home/kinga/Documents/JournalPaper/{type_name}_{voting}_{filtering}.png")
-    plt.clf()
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--train_dir", "-t", help="The directory of the training files")
+    parser.add_argument("--target", "-tar", help="The target of the hate")
+    args = parser.parse_args()
+
     methods = {"rationale_graph": graph_rationale_model, "feature_graph": graph_model, "all_graph": all_graph_model,
                "rationale_bow": bag_of_rationale_words_model, "all_bow": bag_of_words_model}
 
@@ -245,11 +242,11 @@ if __name__ == "__main__":
                 if voting == "majority" and filtering == "pure":
                     continue
                 print(type_name, voting, filtering)
-                train_file = os.path.join("women/m", f"{voting}_train_{filtering}.tsv")
+                train_file = os.path.join(args.train_dir, f"{voting}_train_{filtering}.tsv")
                 if type_name != "feature_graph":
-                    feat, names = method(train_file, "Women")
+                    feat, names = method(train_file, args.target.capitalize())
                 else:
-                    feat, names = method(train_file, "Women", f"women_{voting}_train_{filtering}_features.json")
+                    feat, names = method(train_file, args.target.capitalize(), f"women_{voting}_train_{filtering}_features.json")
                 with open(f"{type_name}_{voting}_{filtering}.tsv", "w") as all_bow:
                     all_bow.write("\t".join(names))
                     all_bow.write("\n")
@@ -262,7 +259,7 @@ if __name__ == "__main__":
                 if voting == "majority" and filtering == "pure":
                     continue
                 print(type_name, voting, filtering)
-                create_features(voting, filtering, type_name, "women/m", gready_model)
+                create_features(voting, filtering, type_name, args.train_dir, gready_model, args.target.capitalize())
     for type_name in methods:
         for voting in ["majority", "minority"]:
             for filtering in ["all", "pure"]:
@@ -270,7 +267,7 @@ if __name__ == "__main__":
                     continue
                 df = pd.read_csv(f"{type_name}_{voting}_{filtering}.tsv", sep="\t")
                 if "graph" in type_name:
-                    calculate_graph_validation(voting, filtering, type_name, "women/m", "Women", len(df.columns))
+                    calculate_graph_validation(voting, filtering, type_name, args.train_dir, args.target.capitalize(), len(df.columns))
                 else:
-                    calculate_bow_validation(voting, filtering, type_name, "women/m", "Women", len(df.columns))
+                    calculate_bow_validation(voting, filtering, type_name, args.train_dir, args.target.capitalize(), len(df.columns))
                 best(voting, filtering, type_name)

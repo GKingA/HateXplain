@@ -45,18 +45,24 @@ def bow_model(
     target: str,
     output_file: str,
     test: bool = False,
+    delete_negative: bool=False,
 ) -> None:
     with open(features, "r") as feat_file:
         features = json.load(feat_file)
     with open(post_id, "r") as post_id_file:
         post_id_division = json.load(post_id_file)
+    df = ExplainableDataset(
+        path=potato_path, label_vocab={"None": 0, target.capitalize(): 1}
+    ).to_dataframe()
     og = pd.read_json(json_path).T
     port = "test" if test else "val"
     test_posts = og[og.post_id.isin(post_id_division[port])]
     words = features[target.capitalize()]
     lemmatizer = WordNetLemmatizer()
     with open(output_file, "w") as out:
-        for (_, original) in test_posts.iterrows():
+        for (_, original), (_, potato) in zip(test_posts.iterrows(), df.iterrows()):
+            if delete_negative and (potato.label != target.capitalize()):
+                continue
             lemmata = [lemmatizer.lemmatize(t) for t in original["post_tokens"]]
             rats = [(lemma in words) * 1 for lemma in lemmata]
             if sum(rats) > 0:
@@ -86,7 +92,7 @@ def bow_model(
                     {
                         "docid": original.post_id,
                         "hard_rationale_predictions": [
-                            {"end_token": index, "start_token": index-1}
+                            {"end_token": index + 1, "start_token": index}
                             for index, i in enumerate(rats) if i == 1
                         ],
                         "soft_rationale_predictions": rats,
@@ -107,6 +113,7 @@ def graph_model(
     target: str,
     output_file: str,
     test: bool = False,
+    delete_negative: bool=False,
 ) -> Tuple[List[List[int]], List[str]]:
     df = ExplainableDataset(
         path=potato_path, label_vocab={"None": 0, target.capitalize(): 1}
@@ -170,9 +177,13 @@ def graph_model(
             test_posts.iterrows(),
             df.iterrows(),
         ):
+            if delete_negative and (og.label != target.capitalize()):
+                continue
             classification, not_class = classification_score(m, target)
             just_classification, just_not_class = classification_score(just, target)
             wo_classification, wo_not_class = classification_score(wo, target)
+            if classification == "toxic" and wo_classification == "toxic":
+                breakpoint()
             rationale_ids = [
                 n
                 for subgraph in m["Matched subgraph"]
@@ -192,8 +203,6 @@ def graph_model(
                     if issue < rat:
                         n += 1
                 corrected_rationale_ids.append(rat - n)
-            if len(corrected_rationale_ids) == 0:
-                corrected_rationale_ids.append(-1)
             dictionary = {
                 "annotation_id": original.post_id,
                 "classification": classification,
@@ -202,7 +211,7 @@ def graph_model(
                     {
                         "docid": original.post_id,
                         "hard_rationale_predictions": [
-                            {"end_token": i - 1, "start_token": i - 2}
+                            {"end_token": i, "start_token": i - 1}
                             for i in corrected_rationale_ids
                         ],
                         "soft_rationale_predictions": [
@@ -240,6 +249,8 @@ def graph_model(
 
 if __name__ == "__main__":
     parse_args = ArgumentParser()
+    parse_args.add_argument("--hand_written", "-hw", help="path to the hand written rules, if not given, "
+                                                          "the script will run on generated rules")
     parse_args.add_argument("--base_path", "-p", help="path to the potato file (dirpath, or exact path, if dirpath, "
                                                       "the assumed format is [voting]_[test or val]_[filter].tsv)")
     parse_args.add_argument("--base_original", "-og", help="path to the original file (dirpath, or exact path, if dirpath, "
@@ -251,50 +262,87 @@ if __name__ == "__main__":
     parse_args.add_argument("--filter", "-fi", choices=["all", "pure", "a", "p"], help="the filtering used for the data.")
     parse_args.add_argument("--method", "-m", choices=["rationale_graph", "feature_graph", "all_graph", "rationale_bow", "all_bow"])
     parse_args.add_argument("--target", "-tar", help="the target of hate.", default="Women")
+    parse_args.add_argument("--delete_negative", "-dn", action="store_true", help="delete the ground truth negative elements.")
     parse_args.add_argument("--output", "-o", help="the output file of the prediction, "
                                                    "default is explanation_dict_[method]_[voting]_[filter].json.")
-    args = parse_args.parse_args("-p women/m/ -og women/m/ "
-                                 "-fe all_bow_features/all_bow_majority_all_3.json "
-                                 "-i post_id_divisions.json "
-                                 "-v majority -fi all -m all_bow".split(" "))
-
-    voting = args.voting
-    filter = args.filter
-    val = "val" if not args.test else "test"
-    if os.path.isdir(args.base_path):
-        validation_file = os.path.join(args.base_path, f"{voting}_{val}_{filter}.tsv")
+    args = parse_args.parse_args()
+    num = {("rationale_graph", "majority", "all"): 7,
+           ("rationale_graph", "minority", "all"): 14,
+           ("rationale_graph", "minority", "pure"): 5,
+           ("feature_graph", "majority", "all"): 6,
+           ("feature_graph", "minority", "all"): 13,
+           ("feature_graph", "minority", "pure"): 4,
+           ("all_graph", "majority", "all"): 7,
+           ("all_graph", "minority", "all"): 14,
+           ("all_graph", "minority", "pure"): 5,
+           ("rationale_bow", "majority", "all"): 3,
+           ("rationale_bow", "minority", "all"): 5,
+           ("rationale_bow", "minority", "pure"): 4,
+           ("all_bow", "majority", "all"): 3,
+           ("all_bow", "minority", "all"): 2,
+           ("all_bow", "minority", "pure"): 3,
+           }
+    if args.hand_written is None:
+        types = ["rationale_graph", "feature_graph", "all_graph", "rationale_bow", "all_bow"]
     else:
-        validation_file = args.base_path
+        types = [args.hand_written]
+    for type_name in types:
+        for voting in ["majority", "minority"]:
+            for filtering in ["all", "pure"]:
+                if voting == "majority" and filtering == "pure":
+                    continue
+                if args.hand_written is not None:
+                    args = parse_args.parse_args("-p women/m/ -og women/m/ "
+                                                 f"-fe {type_name} "
+                                                 "-i post_id_divisions.json "
+                                                 f"-v {voting} -fi {filtering} -dn "
+                                                 f"-o hand_rules_{voting}_{filtering}.json".split(" "))
+                else:
+                    number = num[(type_name, voting, filtering)]
+                    args = parse_args.parse_args("-p women/m/ -og women/m/ "
+                                                 f"-fe {type_name}_features/{type_name}_{voting}_{filtering}_{number}.json "
+                                                 "-i post_id_divisions.json "
+                                                 f"-v {voting} -fi {filtering} -m {type_name} -dn".split(" "))
 
-    if os.path.isdir(args.base_path):
-        original_file = os.path.join(args.base_original, f"{voting}_{filter}.json")
-    else:
-        original_file = args.base_original
+                voting = args.voting
+                filter = args.filter
+                val = "val" if not args.test else "test"
+                if os.path.isdir(args.base_path):
+                    validation_file = os.path.join(args.base_path, f"{voting}_{val}_{filter}.tsv")
+                else:
+                    validation_file = args.base_path
 
-    if args.output is None:
-        output = f"explanation_dict_{args.method}_{voting}_{filter}.json"
-    else:
-        output = args.output
+                if os.path.isdir(args.base_path):
+                    original_file = os.path.join(args.base_original, f"{voting}_{filter}.json")
+                else:
+                    original_file = args.base_original
 
-    in_feats = args.features
-    post_id_divisions = args.post_id
-    target = args.target
+                if args.output is None:
+                    output = f"explanation_dict_{args.method}_{voting}_{filter}.json"
+                else:
+                    output = args.output
 
-    if "graph" in args.method:
-        feat, names = graph_model(
-            validation_file,
-            original_file,
-            post_id_divisions,
-            in_feats,
-            target,
-            output,
-        )
-    else:
-        bow_model(
-            validation_file,
-            original_file,
-            post_id_divisions,
-            in_feats,
-            target,
-            output,
-        )
+                in_feats = args.features
+                post_id_divisions = args.post_id
+                target = args.target
+
+                if hand or "graph" in args.method:
+                    feat, names = graph_model(
+                        validation_file,
+                        original_file,
+                        post_id_divisions,
+                        in_feats,
+                        target,
+                        output,
+                        delete_negative=args.delete_negative,
+                    )
+                else:
+                    bow_model(
+                        validation_file,
+                        original_file,
+                        post_id_divisions,
+                        in_feats,
+                        target,
+                        output,
+                        delete_negative=args.delete_negative,
+                    )

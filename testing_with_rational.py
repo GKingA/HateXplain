@@ -443,6 +443,7 @@ if __name__ == "__main__":
 
     path_name = model_to_use
     additive = "_" if not args.negative_rationale else "_not_neg_"
+    kn = "" if not args.keep_neutral else "_keep_neutral_"
     if args.test_data is None:
         path_name_explanation = (
             "explanations_dicts/"
@@ -450,6 +451,7 @@ if __name__ == "__main__":
             + "_"
             + str(params["att_lambda"])
             + additive
+            + kn
             + "explanation_top5.json"
         )
     else:
@@ -459,6 +461,7 @@ if __name__ == "__main__":
                 + "_"
                 + str(params["att_lambda"])
                 + additive
+                + kn
                 + "explanation_top5_"
                 + os.path.basename(data_file).split(".")[0]
         )
