@@ -118,8 +118,14 @@ def graph_model(
     df = ExplainableDataset(
         path=potato_path, label_vocab={"None": 0, target.capitalize(): 1}
     ).to_dataframe()
-    with open(features, "r") as feat_file:
-        features = json.load(feat_file)
+    if features.endswith("json"):
+        with open(features, "r") as feat_file:
+            features = json.load(feat_file)
+    else:
+        feature_df = pd.read_csv(features, sep="\t", names=["target", "pos", "neg"], header=None)
+        features = {feature_df.target[0]: []}
+        for _, line in feature_df.iterrows():
+            features[feature_df.target[0]].append([[line.pos], [line.neg] if not line.neg else [], line.target])
     with open(post_id, "r") as post_id_file:
         post_id_division = json.load(post_id_file)
     og = pd.read_json(json_path).T
@@ -249,100 +255,55 @@ def graph_model(
 
 if __name__ == "__main__":
     parse_args = ArgumentParser()
-    parse_args.add_argument("--hand_written", "-hw", help="path to the hand written rules, if not given, "
-                                                          "the script will run on generated rules")
-    parse_args.add_argument("--base_path", "-p", help="path to the potato file (dirpath, or exact path, if dirpath, "
-                                                      "the assumed format is [voting]_[test or val]_[filter].tsv)")
-    parse_args.add_argument("--base_original", "-og", help="path to the original file (dirpath, or exact path, if dirpath, "
-                                                          "the assumed format is [voting]_[filter].json)")
-    parse_args.add_argument("--features", "-fe", help="path to the feature file")
-    parse_args.add_argument("--post_id", "-i", help="path to the post_id_divisions.json file")
-    parse_args.add_argument("--test", "-t", action="store_true", help="run it on test data instead of validation data.")
-    parse_args.add_argument("--voting", "-v", choices=["majority", "minority", "maj", "min"], help="the voting used for the data labeling.")
-    parse_args.add_argument("--filter", "-fi", choices=["all", "pure", "a", "p"], help="the filtering used for the data.")
-    parse_args.add_argument("--method", "-m", choices=["rationale_graph", "feature_graph", "all_graph", "rationale_bow", "all_bow"])
-    parse_args.add_argument("--target", "-tar", help="the target of hate.", default="Women")
-    parse_args.add_argument("--delete_negative", "-dn", action="store_true", help="delete the ground truth negative elements.")
-    parse_args.add_argument("--output", "-o", help="the output file of the prediction, "
-                                                   "default is explanation_dict_[method]_[voting]_[filter].json.")
+    parse_args.add_argument("--config", "-c", help="A particular config file or a path to the config files. "
+                                                   "If it's a directory, all of the configs")
     args = parse_args.parse_args()
-    num = {("rationale_graph", "majority", "all"): 7,
-           ("rationale_graph", "minority", "all"): 14,
-           ("rationale_graph", "minority", "pure"): 5,
-           ("feature_graph", "majority", "all"): 6,
-           ("feature_graph", "minority", "all"): 13,
-           ("feature_graph", "minority", "pure"): 4,
-           ("all_graph", "majority", "all"): 7,
-           ("all_graph", "minority", "all"): 14,
-           ("all_graph", "minority", "pure"): 5,
-           ("rationale_bow", "majority", "all"): 3,
-           ("rationale_bow", "minority", "all"): 5,
-           ("rationale_bow", "minority", "pure"): 4,
-           ("all_bow", "majority", "all"): 3,
-           ("all_bow", "minority", "all"): 2,
-           ("all_bow", "minority", "pure"): 3,
-           }
-    if args.hand_written is None:
-        types = ["rationale_graph", "feature_graph", "all_graph", "rationale_bow", "all_bow"]
+    if os.path.isdir(args.config):
+        list_of_configs = [os.path.join(args.config, o) for o in os.listdir(args.config)]
     else:
-        types = [args.hand_written]
-    for type_name in types:
-        for voting in ["majority", "minority"]:
-            for filtering in ["all", "pure"]:
-                if voting == "majority" and filtering == "pure":
-                    continue
-                if args.hand_written is not None:
-                    args = parse_args.parse_args("-p women/m/ -og women/m/ "
-                                                 f"-fe {type_name} "
-                                                 "-i post_id_divisions.json "
-                                                 f"-v {voting} -fi {filtering} -dn "
-                                                 f"-o hand_rules_{voting}_{filtering}.json".split(" "))
-                else:
-                    number = num[(type_name, voting, filtering)]
-                    args = parse_args.parse_args("-p women/m/ -og women/m/ "
-                                                 f"-fe {type_name}_features/{type_name}_{voting}_{filtering}_{number}.json "
-                                                 "-i post_id_divisions.json "
-                                                 f"-v {voting} -fi {filtering} -m {type_name} -dn".split(" "))
+        list_of_configs = [args.config]
 
-                voting = args.voting
-                filter = args.filter
-                val = "val" if not args.test else "test"
-                if os.path.isdir(args.base_path):
-                    validation_file = os.path.join(args.base_path, f"{voting}_{val}_{filter}.tsv")
-                else:
-                    validation_file = args.base_path
+    for conf in list_of_configs:
+        with open(conf) as config_file:
+            config = json.load(config_file)
+        voting = config["voting"]
+        filtering = config["filtering"]
+        val = "val" if not config["test"] else "test"
+        base_path = config["base_path"]
+        base_original = config["base_original"]
+        method = config["method"]
+        in_feats = config["features"]
+        post_id_divisions = config["post_id"]
+        target = config["target"]
+        delete_negative = config["delete_negative"]
+        output = f"explanation_dict_{method}_{voting}_{filtering}.json" if "output" not in config else config["output"]
+        if os.path.isdir(base_path):
+            validation_file = os.path.join(base_path, f"{voting}_{val}_{filtering}.tsv")
+        else:
+            validation_file = base_path
 
-                if os.path.isdir(args.base_path):
-                    original_file = os.path.join(args.base_original, f"{voting}_{filter}.json")
-                else:
-                    original_file = args.base_original
+        if os.path.isdir(base_original):
+            original_file = os.path.join(base_original, f"{voting}_{filtering}.json")
+        else:
+            original_file = base_original
 
-                if args.output is None:
-                    output = f"explanation_dict_{args.method}_{voting}_{filter}.json"
-                else:
-                    output = args.output
-
-                in_feats = args.features
-                post_id_divisions = args.post_id
-                target = args.target
-
-                if hand or "graph" in args.method:
-                    feat, names = graph_model(
-                        validation_file,
-                        original_file,
-                        post_id_divisions,
-                        in_feats,
-                        target,
-                        output,
-                        delete_negative=args.delete_negative,
-                    )
-                else:
-                    bow_model(
-                        validation_file,
-                        original_file,
-                        post_id_divisions,
-                        in_feats,
-                        target,
-                        output,
-                        delete_negative=args.delete_negative,
-                    )
+        if "graph" in method:
+            feat, names = graph_model(
+                validation_file,
+                original_file,
+                post_id_divisions,
+                in_feats,
+                target,
+                output,
+                delete_negative=delete_negative,
+            )
+        else:
+            bow_model(
+                validation_file,
+                original_file,
+                post_id_divisions,
+                in_feats,
+                target,
+                output,
+                delete_negative=delete_negative,
+            )

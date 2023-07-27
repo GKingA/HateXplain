@@ -123,6 +123,16 @@ To create predictions over the whole dataset run test_runs_keep.sh
 
 The rules' output can be generated with rules_testing.py
 
+```bash
+python3 rules_testing.py [-h] [--config CONFIG]
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG, -c CONFIG
+                        A particular config file or a path to the config
+                        files. If it's a directory, all of the configs
+```
+
 Then we can generate the final scores with test_eraser 
 and test_eraser_rule_no_keep
 
